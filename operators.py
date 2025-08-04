@@ -1,5 +1,5 @@
 import bpy
-import subprocess
+from . import utils
 
 
 class TRELLIS_OT_generate_mesh(bpy.types.Operator):
@@ -8,18 +8,19 @@ class TRELLIS_OT_generate_mesh(bpy.types.Operator):
     bl_description = "Run the TRELLIS generator subprocess"
 
     def execute(self, context):
-        script_path = "C:/Users/rober/_projects/TRELLIS/run_generate.py"
+        props = context.scene.auto_remesher
+        props_dict = {
+            "text_prompt": props.text_prompt.strip(), 
+            "image_prompt": props.image_prompt
+        }
+        
         try:
-            result = subprocess.run(
-                ["python", script_path],
-                check=True,
-                capture_output=True,
-                text=True
-            )
-            self.report({'INFO'}, "TRELLIS generation completed.")
-            print(result.stdout)
-        except subprocess.CalledProcessError as e:
-            self.report({'ERROR'}, f"Subprocess failed: {e}")
+            mesh = utils.try_generate_mesh(props_dict)
+            props.mesh = mesh
+            self.report({'INFO'}, "TRELLIS backend successfully generated mesh.")
+            print("TRELLIS backend successfully generated mesh.")
+        except Exception as e:
+            self.report({'ERROR'}, f"TRELLIS backend failed to generate mesh: {e}")
             print(e.stderr)
         return {'FINISHED'}
     
