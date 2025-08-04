@@ -9,7 +9,7 @@ class AutoRemesherProperties(bpy.types.PropertyGroup):
         default=""
     )
 
-    image: bpy.props.PointerProperty(
+    image_prompt: bpy.props.PointerProperty(
         name="Image Prompt",
         description="Image prompt to send to TRELLIS",
         type=bpy.types.Image

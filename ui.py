@@ -14,17 +14,17 @@ class VIEW3D_PT_autoremesher_generator(bpy.types.Panel):
         split1 = layout.split(factor=0.5, align=True)
         split1.label(text="Text Prompt:")
         split1.prop(props, "text_prompt", text="")
-        split1.enabled = not bool(props.image)
+        split1.enabled = not bool(props.image_prompt)
         
         layout.label(text="OR", )
         
         split2 = layout.split(factor=0.5, align=True)
         split2.label(text="Image Prompt:")
-        split2.template_ID(props, "image", open="image.open")
+        split2.template_ID(props, "image_prompt", open="image.open")
         split2.enabled = not bool(props.text_prompt.strip())
 
         row = layout.row()
-        row.enabled = bool(props.text_prompt.strip()) or bool(props.image)
+        row.enabled = bool(props.text_prompt.strip()) or bool(props.image_prompt)
         row.operator("trellis.generate_mesh", icon='PLAY')
 
 
