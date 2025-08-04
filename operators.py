@@ -21,7 +21,7 @@ class TRELLIS_OT_generate_mesh(bpy.types.Operator):
             print("TRELLIS backend successfully generated mesh.")
         except Exception as e:
             self.report({'ERROR'}, f"TRELLIS backend failed to generate mesh: {e}")
-            print(e.stderr)
+            print(e)
         return {'FINISHED'}
     
     

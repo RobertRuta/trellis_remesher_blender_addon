@@ -44,14 +44,11 @@ def register():
             _dynamic_properties.append((context_type, attr_name))
 
 def unregister():
-    # Remove all dynamically added properties
     for context_type, attr_name in _dynamic_properties:
         context_owner = getattr(bpy.types, context_type, None)
         if context_owner and hasattr(context_owner, attr_name):
             delattr(context_owner, attr_name)
-
     _dynamic_properties.clear()
 
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
-        bpy.utils.register_class(cls)

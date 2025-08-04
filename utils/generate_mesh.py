@@ -1,9 +1,9 @@
-from generator_backend import TrellisConnector
-from trellis_mesh_to_blender import trellis_mesh_to_blender
+from ..generator_backend import TrellisConnector
+from .trellis_mesh_to_blender import trellis_mesh_to_blender
 
 
 def try_generate_mesh(props_dict):
-    text_prompt = props_dict["text_propt"]
+    text_prompt = props_dict["text_prompt"]
     image_prompt = props_dict["image_prompt"]
     
     if len(text_prompt) == 0 and image_prompt is None:
