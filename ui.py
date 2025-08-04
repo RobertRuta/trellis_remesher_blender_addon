@@ -98,6 +98,16 @@ class VIEW3D_PT_autoremesher_loader(bpy.types.Panel):
         row2.label(text="Import Mesh:")
         row2.operator("auto_remesher.import_mesh", text="Open", icon='FILE_FOLDER')
         
+        
+class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "Auto Remesher"
+    bl_label = "Remesher"
+    
+    def draw(self, context):
+        pass
+        
 
 class AUTO_REMESHER_OT_import_mesh(bpy.types.Operator):
     bl_idname = "auto_remesher.import_mesh"
@@ -141,7 +151,8 @@ classes = (
     TRELLIS_OT_generate_mesh,
     AUTO_REMESHER_OT_import_mesh,
     VIEW3D_PT_autoremesher_generator,
-    VIEW3D_PT_autoremesher_loader
+    VIEW3D_PT_autoremesher_loader,
+    VIEW3D_PT_autoremesher_remesher
 )
 
 
