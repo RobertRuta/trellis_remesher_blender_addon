@@ -15,7 +15,7 @@ class TRELLIS_OT_generate_mesh(bpy.types.Operator):
         }
         
         try:
-            mesh = utils.try_generate_mesh(props_dict)
+            mesh = utils.send_mesh_generation_request(props_dict)
             props.mesh = mesh
             self.report({'INFO'}, "TRELLIS backend successfully generated mesh.")
             print("TRELLIS backend successfully generated mesh.")

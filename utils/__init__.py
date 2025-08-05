@@ -1,1 +1,1 @@
-from .generate_mesh import try_generate_mesh
+from .trellis_connection import send_mesh_generation_request
