@@ -14,13 +14,6 @@ def update_api(self, context):
     self.api_url = f"http://{self.server_host}:{self.server_port}"
 
 
-# def update_host_and_port(self, context):
-#     parsed = urllib.parse.urlparse(self.api_url)
-#     if parsed.scheme in {"http", "https"} and parsed.hostname and parsed.port:
-#         self.server_host = parsed.hostname
-#         self.server_port = parsed.port
-
-
 class AutoRemesherProperties(bpy.types.PropertyGroup):
     __blender_context_target__ = ("Scene", "auto_remesher")
     
