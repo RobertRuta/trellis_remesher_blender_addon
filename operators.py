@@ -60,3 +60,23 @@ class AUTO_REMESHER_OT_import_mesh(bpy.types.Operator):
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
+    
+    
+class TRELLIS_OT_check_connection(bpy.types.Operator):
+    bl_idname = "trellis.check_connection"
+    bl_label = "Check Connection"
+
+    def execute(self, context):
+        props = context.scene.auto_remesher
+
+        import requests
+        try:
+            url = props.api_url
+            resp = requests.get(f"{url}/status", timeout=2)
+            if resp.status_code == 200:
+                props.connection_status = "✅ Connected"
+            else:
+                props.connection_status = f"⚠ Error {resp.status_code}"
+        except Exception as e:
+            props.connection_status = f"❌ {str(e)}"
+        return {'FINISHED'}

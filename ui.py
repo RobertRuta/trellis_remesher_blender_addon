@@ -1,6 +1,38 @@
 import bpy
 
 
+class VIEW3D_PT_autormesher_api(bpy.types.Panel):
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "Auto Remesher"
+    bl_label = "Trellis Connection"
+
+    def draw(self, context):
+        props = context.scene.auto_remesher
+        layout = self.layout
+        
+        # SERVER CONFIG BOX
+        server_box = layout.box()
+        server_box.label(text="Server Configuration", icon='PREFERENCES')
+        
+        url_row = server_box.split(factor=0.3, align=True)
+        url_row.label(text="API URL:")
+        url_box = url_row.box()
+        url_box.label(text=props.api_url)
+        
+        server_box.prop(props, "advanced_server_config")
+        
+        if props.advanced_server_config:
+            advanced_settings_box = server_box.box()
+            advanced_settings_box.prop(props, "server_host", text="Host")
+            advanced_settings_box.prop(props, "server_port", text="Port")
+
+        # CHECK CONNECTION
+        check_row = server_box.row()
+        check_row.operator("trellis.check_connection", text="Check Connection", icon='URL')
+        check_row.label(text=props.connection_status)
+
+
 class VIEW3D_PT_autoremesher_generator(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -41,7 +73,8 @@ class VIEW3D_PT_autoremesher_generator(bpy.types.Panel):
         generate_row.scale_x = 1.5
         generate_row.alignment = 'CENTER'
         generate_row.operator("trellis.generate_mesh", text="GENERATE", icon='PLAY')
-        
+        generate_row.enabled = not ((props.prompt_mode == 'TEXT' and len(props.text_prompt) == 0) 
+                                    or (props.prompt_mode == 'IMAGE' and props.image_prompt is None))
         col.separator()
         col.separator()
 
@@ -81,7 +114,6 @@ class VIEW3D_PT_autoremesher_loader(bpy.types.Panel):
         row2.operator("auto_remesher.import_mesh", text="Open", icon='FILE_FOLDER')
 
 
-        
 class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
