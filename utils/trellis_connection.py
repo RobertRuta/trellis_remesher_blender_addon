@@ -1,7 +1,46 @@
+import concurrent.futures
 import bpy
 import os
 import requests
 
+
+executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+
+
+def send_mesh_generation_request_async(props_dict, callback=None):
+    def task():
+        try:
+            result = send_mesh_generation_request(props_dict)
+            if callback:
+                bpy.app.timers.register(lambda: callback(result), first_interval=0.1)
+        except Exception as e:
+            print(f"Error in mesh generation: {e}")
+            if callback:
+                bpy.app.timers.register(lambda: callback(None), first_interval=0.1)
+
+    executor.submit(task)
+    
+
+def handle_mesh_generation_result(result):
+    if result is None:
+        print("Mesh generation failed or was cancelled.")
+        return
+    mesh_path = result["mesh_path"]
+    prompt = result["prompt"]
+    mesh_name = prompt.replace(",", "").replace(".", "").replace(" ", "-")
+    
+    bpy.ops.import_scene.gltf(filepath=mesh_path)
+    mesh = bpy.context.selected_objects[0]
+
+    props = bpy.context.scene.auto_remesher
+    props.mesh = mesh
+    props.mesh.name = mesh_name
+    props.mesh["source"] = result["source"]
+    props.mesh["prompt_mode"] = result["prompt_mode"]
+    props.mesh["prompt"] = prompt
+
+    print("TRELLIS mesh successfully loaded into Blender.")
+    
 
 def send_mesh_generation_request(props_dict):
     text_prompt = props_dict["text_prompt"]
@@ -41,11 +80,9 @@ def send_mesh_generation_request(props_dict):
         if not os.path.exists(mesh_path):
             raise FileNotFoundError(f"Mesh file not found: {mesh_path}")
 
-        bpy.ops.import_scene.gltf(filepath=mesh_path)
-
         # Return the imported mesh object
         return {
-            "mesh": bpy.context.selected_objects[0],
+            "mesh_path": mesh_path,
             "source": result["source"],
             "prompt_mode": result["prompt_mode"],
             "prompt": result["prompt"]

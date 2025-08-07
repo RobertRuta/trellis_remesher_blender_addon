@@ -17,15 +17,10 @@ class TRELLIS_OT_generate_mesh(bpy.types.Operator):
         }
         
         try:
-            mesh_output = utils.send_mesh_generation_request(props_dict)
-            mesh_name = mesh_output["prompt"].replace(",", "").replace(".", "").replace(" ", "-")
-            props.mesh = mesh_output["mesh"]
-            props.mesh.name = mesh_name
-            props.mesh["source"] = mesh_output["source"]
-            props.mesh["prompt_mode"] = props.prompt_mode
-            props.mesh["prompt"] = mesh_output["prompt"]
-            self.report({'INFO'}, "TRELLIS backend successfully generated mesh.")
-            print("TRELLIS backend successfully generated mesh.")
+            mesh_output = utils.send_mesh_generation_request_async(props_dict, 
+                                                                   utils.handle_mesh_generation_result)
+
+            self.report({'INFO'}, "TRELLIS Generating...")
         except Exception as e:
             self.report({'ERROR'}, f"TRELLIS backend failed to generate mesh: {e}")
             print(e)

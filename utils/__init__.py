@@ -1,1 +1,1 @@
-from .trellis_connection import send_mesh_generation_request
+from .trellis_connection import send_mesh_generation_request, handle_mesh_generation_result, send_mesh_generation_request_async
