@@ -1,5 +1,4 @@
 import bpy
-import urllib.parse
 
 
 def update_prompt_mode(self, context):
