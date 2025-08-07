@@ -66,6 +66,8 @@ def send_mesh_generation_request(props_dict):
         request_dict["is_text_prompt"] = False
     
     request_dict["prompt"] = prompt
+    request_dict["generation_quality"] = props_dict["generation_quality"]
+    
     url = "http://localhost:8765/run_generator"
     
     try:

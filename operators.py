@@ -13,7 +13,8 @@ class TRELLIS_OT_generate_mesh(bpy.types.Operator):
 
         props_dict = {
             "text_prompt": props.text_prompt.strip(), 
-            "image_prompt": props.image_path
+            "image_prompt": props.image_path,
+            "generation_quality": props.generation_quality
         }
         
         try:
@@ -83,7 +84,6 @@ class AUTO_REMESHER_OT_import_mesh(bpy.types.Operator):
         # Set the imported object as the remesher target
         context.scene.auto_remesher.mesh = imported_obj
         return {'FINISHED'}
-
     
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)

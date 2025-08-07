@@ -52,6 +52,10 @@ class VIEW3D_PT_autoremesher_generator(bpy.types.Panel):
         prompt_mode_selector.alignment = 'EXPAND'
         prompt_mode_selector.prop(props, "prompt_mode", expand=True)
         prompt_mode_selector.separator()
+        if props.prompt_mode == 'TEXT':
+            quality_settings = col.row(align=True)
+            quality_settings.label(text="Quality:")
+            quality_settings.prop(props, "generation_quality", expand=True)
 
         prompt_box = col.box()
         prompt_box.alignment = 'EXPAND'

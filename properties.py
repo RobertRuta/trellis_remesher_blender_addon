@@ -55,6 +55,18 @@ class AutoRemesherProperties(bpy.types.PropertyGroup):
         default="Unknown",
         description="Connection check result"
     )
+    
+    generation_quality: bpy.props.EnumProperty(
+        name="Generation Quality",
+        description="Generation quality settings. Impact generation time and quality.",
+        items=[
+            ('LOW', "Low", "Fastest"),
+            ('MID', "Mid", "Faster"),
+            ('HIGH', "High", "Slow"),
+        ],
+        default='LOW'
+    )
+
     prompt_mode: bpy.props.EnumProperty(
         name="Prompt Mode",
         description="Choose between text or image prompt input",
