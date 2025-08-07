@@ -1,3 +1,4 @@
+import math
 import bpy
 from . import utils
 
@@ -9,11 +10,6 @@ class TRELLIS_OT_generate_mesh(bpy.types.Operator):
 
     def execute(self, context):
         props = context.scene.auto_remesher
-        
-        if props.prompt_mode == 'TEXT':
-            props.image_prompt = None
-        elif props.prompt_mode == 'IMAGE':
-            props.text_prompt = ''
 
         props_dict = {
             "text_prompt": props.text_prompt.strip(), 
@@ -21,8 +17,13 @@ class TRELLIS_OT_generate_mesh(bpy.types.Operator):
         }
         
         try:
-            mesh = utils.send_mesh_generation_request(props_dict)
-            props.mesh = mesh
+            mesh_output = utils.send_mesh_generation_request(props_dict)
+            mesh_name = mesh_output["prompt"].replace(",", "").replace(".", "").replace(" ", "-")
+            props.mesh = mesh_output["mesh"]
+            props.mesh.name = mesh_name
+            props.mesh["source"] = mesh_output["source"]
+            props.mesh["prompt_mode"] = props.prompt_mode
+            props.mesh["prompt"] = mesh_output["prompt"]
             self.report({'INFO'}, "TRELLIS backend successfully generated mesh.")
             print("TRELLIS backend successfully generated mesh.")
         except Exception as e:

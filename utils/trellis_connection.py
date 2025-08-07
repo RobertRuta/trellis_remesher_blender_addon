@@ -44,7 +44,12 @@ def send_mesh_generation_request(props_dict):
         bpy.ops.import_scene.gltf(filepath=mesh_path)
 
         # Return the imported mesh object
-        return bpy.context.selected_objects[0]
+        return {
+            "mesh": bpy.context.selected_objects[0],
+            "source": result["source"],
+            "prompt_mode": result["prompt_mode"],
+            "prompt": result["prompt"]
+        }
     except Exception as e:
         print(f"Failed to connect to backend: {e}")
         raise
