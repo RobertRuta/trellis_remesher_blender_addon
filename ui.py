@@ -89,17 +89,19 @@ class VIEW3D_PT_autoremesher_loader(bpy.types.Panel):
         layout = self.layout
         props = context.scene.auto_remesher
 
-        box = layout.box()
-        col = box.column(align=True)
-        col.label(text="Loaded Mesh Info", icon='OBJECT_DATA')
-
-        if props.mesh and props.mesh.type == 'MESH':
-            mesh_box = col.box()
-            mesh_box.label(text=f"Name: {props.mesh.name}")
-            mesh_box.label(text=f"Verts: {len(props.mesh.data.vertices)}")
-            mesh_box.label(text=f"Faces: {len(props.mesh.data.polygons)}")
+        mesh_info_box = layout.box()
+        mesh_info_label = mesh_info_box.column(align=True)
+        mesh_info_label.label(text="Loaded Mesh Info", icon='OBJECT_DATA')
+        mesh_data_row = mesh_info_box.row(align=True)
+        mesh_data_row.alignment = 'CENTER'
+        if props.mesh and getattr(props.mesh, "type", None) == 'MESH':
+            mesh_data_box = mesh_data_row.box()
+            mesh_data_box.label(text=f"Name: {props.mesh.name}")
+            mesh_data_box.label(text=f"Verts: {len(props.mesh.data.vertices)}")
+            mesh_data_box.label(text=f"Faces: {len(props.mesh.data.polygons)}")
         else:
-            col.label(text="No mesh loaded yet.", icon='INFO')
+            mesh_data_row.label(text="No mesh loaded yet.", icon='INFO')
+            mesh_data_row.enabled = False
 
         layout.separator()
 
