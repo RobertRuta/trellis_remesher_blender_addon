@@ -61,7 +61,7 @@ class VIEW3D_PT_autoremesher_generator(bpy.types.Panel):
         if props.prompt_mode == 'TEXT':
             prompt_box.prop(props, "text_prompt", text="")
         elif props.prompt_mode == 'IMAGE':
-            prompt_box.template_ID(props, "image_prompt", open="image.open")
+            prompt_box.template_ID(props, "image", open="image.open")
         
         prompt_box.separator()
 
@@ -74,7 +74,7 @@ class VIEW3D_PT_autoremesher_generator(bpy.types.Panel):
         generate_row.alignment = 'CENTER'
         generate_row.operator("trellis.generate_mesh", text="GENERATE", icon='PLAY')
         generate_row.enabled = not ((props.prompt_mode == 'TEXT' and len(props.text_prompt) == 0) 
-                                    or (props.prompt_mode == 'IMAGE' and props.image_prompt is None))
+                                    or (props.prompt_mode == 'IMAGE' and len(props.image_path) == 0))
         col.separator()
         col.separator()
 

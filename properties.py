@@ -13,6 +13,14 @@ def update_api(self, context):
     self.api_url = f"http://{self.server_host}:{self.server_port}"
 
 
+def update_image_path(self, context):
+    if self.image:
+        # Convert to absolute file path
+        self.image_path = bpy.path.abspath(self.image.filepath)
+    else:
+        self.image_path = ""
+
+
 class AutoRemesherProperties(bpy.types.PropertyGroup):
     __blender_context_target__ = ("Scene", "auto_remesher")
     
@@ -63,10 +71,17 @@ class AutoRemesherProperties(bpy.types.PropertyGroup):
         default=""
     )
 
-    image_prompt: bpy.props.PointerProperty(
+    image: bpy.props.PointerProperty(
         name="Image Prompt",
-        description="Image prompt to send to TRELLIS",
-        type=bpy.types.Image
+        description="Image we want to TRELLIS to use as a prompt",
+        type=bpy.types.Image,
+        update=update_image_path
+    )
+
+    image_path: bpy.props.StringProperty(
+        name="Image Prompt",
+        description="Image path to send to TRELLIS",
+        default=""
     )
 
     mesh: bpy.props.PointerProperty(

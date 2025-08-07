@@ -7,12 +7,12 @@ def send_mesh_generation_request(props_dict):
     text_prompt = props_dict["text_prompt"]
     image_prompt = props_dict["image_prompt"]
     
-    if len(text_prompt) == 0 and image_prompt is None:
+    if len(text_prompt) == 0 and len(image_prompt) == 0:
         raise ValueError("No prompt supplied. Please provide a value for \
                         either \'image_prompt\' or \'text_prompt\'.")
     
     # Validate that exactly one prompt type is provided
-    if len(text_prompt) > 0 and not image_prompt is None:
+    if len(text_prompt) > 0 and len(image_prompt) > 0:
         raise ValueError("Both \'text_prompt\' and \'image_prompt\' \
             provided with valid values. Only one allowed.")
     

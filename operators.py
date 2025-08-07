@@ -9,9 +9,15 @@ class TRELLIS_OT_generate_mesh(bpy.types.Operator):
 
     def execute(self, context):
         props = context.scene.auto_remesher
+        
+        if props.prompt_mode == 'TEXT':
+            props.image_prompt = None
+        elif props.prompt_mode == 'IMAGE':
+            props.text_prompt = ''
+
         props_dict = {
             "text_prompt": props.text_prompt.strip(), 
-            "image_prompt": props.image_prompt
+            "image_prompt": props.image_path
         }
         
         try:
@@ -37,9 +43,15 @@ class AUTO_REMESHER_OT_import_mesh(bpy.types.Operator):
     )
     
     def execute(self, context):
+        # Capture existing objects before import
+        before = set(bpy.data.objects)
+
+        # Run the appropriate import operator
         ext = self.filepath.lower()
         if ext.endswith(".obj"):
-            bpy.ops.import_scene.obj(filepath=self.filepath)
+            # bpy.ops.import_scene.obj(filepath=self.filepath)
+            self.report({'ERROR'}, "Obj not supported yet")
+            return {'CANCELLED'}
         elif ext.endswith(".fbx"):
             bpy.ops.import_scene.fbx(filepath=self.filepath)
         elif ext.endswith(".glb") or ext.endswith(".gltf"):
@@ -52,10 +64,30 @@ class AUTO_REMESHER_OT_import_mesh(bpy.types.Operator):
             self.report({'ERROR'}, "Unsupported file type")
             return {'CANCELLED'}
         
-        # Assume last imported object is active
-        obj = context.selected_objects[-1]
-        context.scene.auto_remesher.mesh = obj
+        # Identify newly imported objects
+        after = set(bpy.data.objects)
+        new_objects = list(after - before)
+        if not new_objects:
+            self.report({'ERROR'}, "No mesh imported")
+            return {'CANCELLED'}
+
+        # Try to find the main mesh object among the new ones
+        new_meshes = [obj for obj in new_objects if obj.type == 'MESH']
+        if not new_meshes:
+            self.report({'ERROR'}, "No mesh object found in import")
+            return {'CANCELLED'}
+
+        imported_obj = new_meshes[-1]  # Or first(), or whatever logic you prefer
+
+        # Ensure the object is selected and visible
+        bpy.ops.object.select_all(action='DESELECT')
+        imported_obj.select_set(True)
+        context.view_layer.objects.active = imported_obj
+
+        # Set the imported object as the remesher target
+        context.scene.auto_remesher.mesh = imported_obj
         return {'FINISHED'}
+
     
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)
