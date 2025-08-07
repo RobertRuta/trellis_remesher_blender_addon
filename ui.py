@@ -14,41 +14,34 @@ class VIEW3D_PT_autoremesher_generator(bpy.types.Panel):
         box = layout.box()
         col = box.column(align=True)
 
-        col.label(text="Prompt Input", icon='INFO')
+        col.label(text="Prompt", icon='INFO')
         col.separator()
-        col.separator()
+        prompt_mode_selector = col.row(align=True)
+        prompt_mode_selector.alignment = 'EXPAND'
+        prompt_mode_selector.prop(props, "prompt_mode", expand=True)
+        prompt_mode_selector.separator()
 
-        text_box = col.box()
-        text_label = text_box.row(align=True)
-        # text_label.alignment = 'CENTER'
-        text_label.label(text="Text Prompt:")
-        text_input_field = text_box.row(align=True)
-        text_input_field.prop(props, "text_prompt", text="")
-        text_box.enabled = not bool(props.image_prompt)
-        text_box.separator()
+        prompt_box = col.box()
+        prompt_box.alignment = 'EXPAND'
+        prompt_box.separator()
+        # row = prompt_box.row()
+        # row.separator()
+        if props.prompt_mode == 'TEXT':
+            prompt_box.prop(props, "text_prompt", text="")
+        elif props.prompt_mode == 'IMAGE':
+            prompt_box.template_ID(props, "image_prompt", open="image.open")
         
-        col.separator()
-        or_separator = col.row()
-        or_separator.alignment = 'CENTER'
-        or_separator.label(text="or", icon='ARROW_LEFTRIGHT')
-        col.separator()
-
-        image_box = col.box()
-        image_label = image_box.row(align=True)
-        # image_label.alignment = 'CENTER'
-        image_label.label(text="Image Prompt:")
-        image_prompt_selector = image_box.row(align=True)
-        image_prompt_selector.template_ID(props, "image_prompt", open="image.open")
-        image_box.enabled = not bool(props.text_prompt.strip())
-        image_box.separator()
+        prompt_box.separator()
 
         col.separator()
         col.separator()
-        col.separator()
+
+        # Enable only if valid input
         generate_row = col.row()
+        generate_row.scale_x = 1.5
         generate_row.alignment = 'CENTER'
-        generate_row.enabled = bool(props.text_prompt.strip()) or bool(props.image_prompt)
         generate_row.operator("trellis.generate_mesh", text="GENERATE", icon='PLAY')
+        
         col.separator()
         col.separator()
 
