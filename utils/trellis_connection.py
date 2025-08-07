@@ -1,8 +1,6 @@
 import bpy
 import os
 import requests
-# from ..generator_backend import TrellisConnector
-from .trellis_mesh_to_blender import trellis_mesh_to_blender
 
 
 def send_mesh_generation_request(props_dict):
@@ -23,27 +21,27 @@ def send_mesh_generation_request(props_dict):
     # Set final prompt
     if len(text_prompt) > 0:
         prompt = text_prompt
-        request_dict["prompt_type"] = "text"
+        request_dict["is_text_prompt"] = True
     else:
         prompt = image_prompt
-        request_dict["prompt_type"] = "image"
+        request_dict["is_text_prompt"] = False
     
     request_dict["prompt"] = prompt
     url = "http://localhost:8765/run_generator"
     
     try:
-        response = requests.post(url, request_dict)
+        response = requests.post(url, json=request_dict)
         response.raise_for_status()
         result = response.json()
         
         if result["status"] != "ok":
             raise RuntimeError("Backend return error.")
-        
+    
         mesh_path = result["mesh_path"]
         if not os.path.exists(mesh_path):
             raise FileNotFoundError(f"Mesh file not found: {mesh_path}")
 
-        bpy.ops.import_scene.obj(filepath=mesh_path)
+        bpy.ops.import_scene.gltf(filepath=mesh_path)
 
         # Return the imported mesh object
         return bpy.context.selected_objects[0]
