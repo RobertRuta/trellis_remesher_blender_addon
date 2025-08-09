@@ -193,8 +193,8 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
             list_ops = list_row.column(align=True)
             list_ops.operator("auto_remesher.threshold_add", icon='ADD', text="")
             list_ops.operator("auto_remesher.threshold_remove", icon='REMOVE', text="")
-            list_ops.separator()
-            list_ops.separator()
+            # list_ops.separator()
+            list_ops.operator("auto_remesher.threshold_autoreorder", icon='SORTSIZE', text="")
             list_ops.operator("auto_remesher.threshold_move", icon='TRIA_UP', text="").direction = 'UP'
             list_ops.operator("auto_remesher.threshold_move", icon='TRIA_DOWN', text="").direction = 'DOWN'
 

@@ -112,3 +112,47 @@ class AUTO_REMESHER_OT_generate_finer_detail(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class AUTO_REMESHER_OT_threshold_autoreorder(bpy.types.Operator):
+    bl_idname = "auto_remesher.threshold_autoreorder"
+    bl_label = "Auto-Reorder Thresholds"
+    bl_description = "Order thresholds by angle ascending (smallest first)"
+
+    def execute(self, context):
+        rprops = context.scene.auto_remesher.remesher
+        # Snapshot current list with indices
+        snapshot = [
+            (float(item.angle_deg), float(item.strength), tuple(item.color), int(item.uid))
+            for item in rprops.thresholds
+        ]
+        if not snapshot:
+            return {'FINISHED'}
+
+        # Remember selected uid if any
+        selected_uid = None
+        if 0 <= rprops.thresholds_index < len(rprops.thresholds):
+            selected_uid = int(rprops.thresholds[rprops.thresholds_index].uid)
+
+        # Sort by angle ascending
+        snapshot.sort(key=lambda t: t[0])
+
+        # Rebuild collection in sorted order
+        rprops.thresholds.clear()
+        for angle, strength, color, uid in snapshot:
+            item = rprops.thresholds.add()
+            item.angle_deg = angle
+            item.strength = strength
+            item.color = color
+            item.uid = uid
+
+        # Restore selection based on uid
+        if selected_uid is not None:
+            for i, item in enumerate(rprops.thresholds):
+                if int(item.uid) == selected_uid:
+                    rprops.thresholds_index = i
+                    break
+            else:
+                rprops.thresholds_index = min(len(rprops.thresholds) - 1, 0)
+
+        return {'FINISHED'}
+
+

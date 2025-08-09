@@ -89,6 +89,12 @@ class AUTO_REMESHER_OT_detect_creases(bpy.types.Operator):
             except Exception:
                 pass
 
+            # Auto-run visualiser after calculating creases
+            try:
+                bpy.ops.auto_remesher.vp_crease_vis()
+            except Exception:
+                pass
+
             self.report({'INFO'}, f"Creases set on {detected} edges")
             return {'FINISHED'}
 
