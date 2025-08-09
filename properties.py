@@ -21,9 +21,9 @@ def update_image_path(self, context):
         self.image_path = ""
 
 
-class AutoRemesherProperties(bpy.types.PropertyGroup):
-    __blender_context_target__ = ("Scene", "auto_remesher")
-    
+class AutoRemesherServerProperties(bpy.types.PropertyGroup):
+    """Connection/server related settings."""
+
     server_host: bpy.props.StringProperty(
         name="Host",
         default="localhost",
@@ -55,7 +55,11 @@ class AutoRemesherProperties(bpy.types.PropertyGroup):
         default="Unknown",
         description="Connection check result"
     )
-    
+
+
+class AutoRemesherGeneratorProperties(bpy.types.PropertyGroup):
+    """Generation prompt and quality settings."""
+
     generation_quality: bpy.props.EnumProperty(
         name="Generation Quality",
         description="Generation quality settings. Impact generation time and quality.",
@@ -96,8 +100,63 @@ class AutoRemesherProperties(bpy.types.PropertyGroup):
         default=""
     )
 
+
+class AutoRemesherRemesherProperties(bpy.types.PropertyGroup):
+    """Remesher target selection and detection settings."""
+
     mesh: bpy.props.PointerProperty(
         name="Loaded Mesh",
         description="Loaded or generated mesh",
         type=bpy.types.Object
     )
+
+    crease_angle_threshold: bpy.props.FloatProperty(
+        name="Angle Threshold (°)",
+        description="Mark edges whose dihedral angle is greater than or equal to this value",
+        default=30.0, min=0.0, max=180.0
+    )
+
+    crease_strength: bpy.props.FloatProperty(
+        name="Crease Strength",
+        description="Crease weight applied to detected edges (0.0 - 1.0)",
+        default=1.0, min=0.0, max=1.0
+    )
+
+    mark_boundary_as_crease: bpy.props.BoolProperty(
+        name="Treat Boundary as Crease",
+        description="Mark open boundary edges as creases",
+        default=True
+    )
+
+    clear_existing_creases: bpy.props.BoolProperty(
+        name="Clear Existing First",
+        description="Clear existing edge creases before detection",
+        default=True
+    )
+
+    # Visualization settings
+    show_crease_viz: bpy.props.BoolProperty(
+        name="Show Crease Viz",
+        description="Overlay crease edges using Geometry Nodes",
+        default=False
+    )
+
+    viz_threshold: bpy.props.FloatProperty(
+        name="Viz Threshold",
+        description="Only visualize creases with value >= this threshold",
+        default=0.5, min=0.0, max=1.0
+    )
+
+    viz_thickness: bpy.props.FloatProperty(
+        name="Viz Thickness",
+        description="Thickness of crease visualization (in Blender units)",
+        default=0.01, min=0.0, soft_max=0.2
+    )
+
+
+class AutoRemesherProperties(bpy.types.PropertyGroup):
+    __blender_context_target__ = ("Scene", "auto_remesher")
+
+    server: bpy.props.PointerProperty(type=AutoRemesherServerProperties)
+    generator: bpy.props.PointerProperty(type=AutoRemesherGeneratorProperties)
+    remesher: bpy.props.PointerProperty(type=AutoRemesherRemesherProperties)

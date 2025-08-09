@@ -33,11 +33,11 @@ def handle_mesh_generation_result(result):
     mesh = bpy.context.selected_objects[0]
 
     props = bpy.context.scene.auto_remesher
-    props.mesh = mesh
-    props.mesh.name = mesh_name
-    props.mesh["source"] = result["source"]
-    props.mesh["prompt_mode"] = result["prompt_mode"]
-    props.mesh["prompt"] = prompt
+    props.remesher.mesh = mesh
+    props.remesher.mesh.name = mesh_name
+    props.remesher.mesh["source"] = result["source"]
+    props.remesher.mesh["prompt_mode"] = result["prompt_mode"]
+    props.remesher.mesh["prompt"] = prompt
 
     print("TRELLIS mesh successfully loaded into Blender.")
     
