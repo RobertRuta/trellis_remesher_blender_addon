@@ -5,7 +5,6 @@ from . import generation as _generation
 from . import import_mesh as _import_mesh
 from . import connection as _connection
 from . import creases as _creases
-from . import gn_visualiser as _gn_vis
 from . import vp_visualiser as _vp_vis
 from . import thresholds_ui as _thr_ui
 
@@ -24,7 +23,7 @@ def _export_class(cls):
     EXPORTED_CLASSES.append(cls)
 
 # Collect all classes from submodules
-for _mod in (_generation, _import_mesh, _connection, _creases, _gn_vis, _vp_vis):
+for _mod in (_generation, _import_mesh, _connection, _creases, _vp_vis):
     for _name in dir(_mod):
         _obj = getattr(_mod, _name)
         # Filter bpy operator classes by common Blender base class
