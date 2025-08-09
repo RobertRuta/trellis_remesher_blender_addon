@@ -5,6 +5,7 @@ from . import operators, ui
 from .properties import (
     AutoRemesherServerProperties,
     AutoRemesherGeneratorProperties,
+    AutoRemesherThresholdItem,
     AutoRemesherRemesherProperties,
     AutoRemesherProperties,
 )
@@ -24,6 +25,7 @@ def _get_classes_from_module(module):
 _property_classes_in_order = (
     AutoRemesherServerProperties,
     AutoRemesherGeneratorProperties,
+    AutoRemesherThresholdItem,
     AutoRemesherRemesherProperties,
     AutoRemesherProperties,
 )

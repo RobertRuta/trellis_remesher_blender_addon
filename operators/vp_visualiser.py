@@ -1,5 +1,6 @@
 import bpy
 import bmesh
+import math
 
 
 class AUTO_REMESHER_OT_vp_crease_visualiser(bpy.types.Operator):
@@ -44,35 +45,68 @@ class AUTO_REMESHER_OT_vp_crease_visualiser(bpy.types.Operator):
             bm.faces.ensure_lookup_table()
             bm.edges.ensure_lookup_table()
 
-            # Get crease layer from bmesh
-            crease_layer = bm.edges.layers.float.get('crease_edge')
-            if crease_layer is None:
-                self.report({'ERROR'}, "No crease data in bmesh. Run crease detection first.")
-                bm.free()
-                return {'CANCELLED'}
+            # Read crease values directly from mesh edge attribute by index
+            edge_values = []
+            try:
+                # Fast path
+                edge_values = [0.0] * len(mesh.edges)
+                crease_attr.data.foreach_get("value", edge_values)
+            except Exception:
+                # Fallback path
+                edge_values = [float(d.value) for d in crease_attr.data]
 
             # Initialize all face corners to default color (white)
-            default_color = (255, 255, 255, 255)  # RGBA
+            default_color = (1.0, 1.0, 1.0, 1.0)  # RGBA in 0..1
             for poly in mesh.polygons:
                 for loop_idx in poly.loop_indices:
                     attr.data[loop_idx].color = default_color
 
-            # Color edges that meet crease threshold
-            threshold = rprops.viz_threshold
-            crease_color = (255, 0, 0, 255)  # Red for creases
-            
-            for edge in bm.edges:
-                crease_value = edge[crease_layer]
-                if crease_value >= threshold:
-                    # Color all face corners of faces connected to this edge
-                    for face in edge.link_faces:
-                        for vert in edge.verts:
-                            # Find the loop indices for this vertex in this face
-                            for loop in face.loops:
-                                if loop.vert == vert:
-                                    # Get the mesh loop index
-                                    mesh_loop_idx = loop.index
-                                    attr.data[mesh_loop_idx].color = crease_color
+            # Color edges according to threshold list only (no base color)
+            multi = getattr(rprops, "threshold_mode", 'MULTI') == 'MULTI'
+            tol = 0.05
+
+            def paint_edge(edge, col):
+                for face in edge.link_faces:
+                    for vert in edge.verts:
+                        for loop in face.loops:
+                            if loop.vert == vert:
+                                attr.data[loop.index].color = col
+
+            if multi:
+                # Compute dihedral angles once (degrees) for categorisation
+                bm.normal_update()
+                edge_angle_deg = {}
+                for edge in bm.edges:
+                    if len(edge.link_faces) == 2:
+                        f0, f1 = edge.link_faces
+                        dot = max(-1.0, min(1.0, f0.normal.dot(f1.normal)))
+                        edge_angle_deg[edge.index] = math.degrees(math.acos(dot))
+                    else:
+                        edge_angle_deg[edge.index] = 180.0  # treat boundary as very sharp
+
+                # Paint in list order; for each threshold, color edges whose angle meets it
+                thresholds_snapshot = list(rprops.thresholds)
+                for item in thresholds_snapshot:
+                    rgba = item.color
+                    # item.color is already 0..1
+                    col = (float(rgba[0]), float(rgba[1]), float(rgba[2]), float(rgba[3]))
+                    min_angle = float(item.angle_deg)
+                    for edge in bm.edges:
+                        # Only visualize edges that were marked by detection (strength > 0)
+                        if edge_values[edge.index] <= 0.0:
+                            continue
+                        if edge_angle_deg.get(edge.index, 0.0) + 1e-6 >= min_angle:
+                            paint_edge(edge, col)
+            else:
+                # Single pass: color only edges that match any threshold strength; leave others white
+                for edge in bm.edges:
+                    v = edge_values[edge.index]
+                    for item in rprops.thresholds:
+                        if abs(v - float(item.strength)) <= tol:
+                            rgba = item.color
+                            col = (float(rgba[0]), float(rgba[1]), float(rgba[2]), float(rgba[3]))
+                            paint_edge(edge, col)
+                            break
 
             bm.free()
 
@@ -83,7 +117,10 @@ class AUTO_REMESHER_OT_vp_crease_visualiser(bpy.types.Operator):
             if was_edit:
                 bpy.ops.object.mode_set(mode='EDIT')
 
-            self.report({'INFO'}, f"Vertex paint visualization applied. Creases colored red.")
+            if multi:
+                self.report({'INFO'}, "VP visualization applied with multi-threshold coloring.")
+            else:
+                self.report({'INFO'}, "VP visualization applied.")
             return {'FINISHED'}
 
         except Exception as e:

@@ -38,25 +38,31 @@ class AUTO_REMESHER_OT_detect_creases(bpy.types.Operator):
                 for e in bm.edges:
                     e[crease_layer] = 0.0
 
-            threshold_rad = math.radians(rprops.crease_angle_threshold)
-            strength = rprops.crease_strength
-
             detected = 0
             for e in bm.edges:
                 lf = e.link_faces
-                mark = False
-                if len(lf) == 2:
+                is_boundary = False
+                # Mesh boundary -- edge has one attached face
+                if len(lf) == 1 and rprops.mark_boundary_as_crease:
+                    is_boundary = True
+                # Standard edge with 2 faces attached
+                elif len(lf) == 2:
                     dot = max(-1.0, min(1.0, lf[0].normal.dot(lf[1].normal)))
-                    angle = math.acos(dot)
-                    if angle >= threshold_rad:
-                        mark = True
-                elif len(lf) == 1 and rprops.mark_boundary_as_crease:
-                    mark = True
+                    angle_deg = math.degrees(math.acos(dot))
+                    best_strength = 0.0
+                    if getattr(rprops, 'threshold_mode', 'MULTI') == 'MULTI':
+                        # Choose the strongest threshold whose angle is <= the edge angle
+                        for item in sorted(rprops.thresholds, key=lambda t: float(t.angle_deg), reverse=True):
+                            if angle_deg >= float(item.angle_deg):
+                                best_strength = float(item.strength)
+                                break
+                    else:
+                        # Single threshold mode
+                        if angle_deg >= float(rprops.crease_angle_threshold):
+                            best_strength = float(rprops.crease_strength)
 
-                if mark:
-                    current = e[crease_layer]
-                    if current < strength:
-                        e[crease_layer] = strength
+                if is_boundary or best_strength > 0.0:
+                    e[crease_layer] = 1.0 if is_boundary else best_strength
                     detected += 1
 
             if is_edit:
@@ -71,6 +77,17 @@ class AUTO_REMESHER_OT_detect_creases(bpy.types.Operator):
                 bm2.from_mesh(mesh)
                 _sync_bmesh_edge_layer_to_mesh_attribute(mesh, bm2, "crease_edge")
                 bm2.free()
+
+            # Update crease count stat on properties
+            try:
+                attr = mesh.attributes.get('crease_edge')
+                if attr is not None:
+                    values = [0.0] * len(mesh.edges)
+                    attr.data.foreach_get("value", values)
+                    crease_count = sum(1 for v in values if v > 0.0)
+                    rprops.crease_count = int(crease_count)
+            except Exception:
+                pass
 
             self.report({'INFO'}, f"Creases set on {detected} edges")
             return {'FINISHED'}
@@ -121,6 +138,12 @@ class AUTO_REMESHER_OT_clear_creases(bpy.types.Operator):
                 bm2.from_mesh(mesh)
                 _sync_bmesh_edge_layer_to_mesh_attribute(mesh, bm2, "crease_edge")
                 bm2.free()
+
+            # Reset crease count stat
+            try:
+                rprops.crease_count = 0
+            except Exception:
+                pass
 
             self.report({'INFO'}, "All creases cleared")
             return {'FINISHED'}

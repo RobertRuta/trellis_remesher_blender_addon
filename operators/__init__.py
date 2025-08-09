@@ -7,6 +7,7 @@ from . import connection as _connection
 from . import creases as _creases
 from . import gn_visualiser as _gn_vis
 from . import vp_visualiser as _vp_vis
+from . import thresholds_ui as _thr_ui
 
 # Hoist classes into this package namespace so the root addon's
 # auto-registration (which inspects this module) still works.
@@ -33,5 +34,17 @@ for _mod in (_generation, _import_mesh, _connection, _creases, _gn_vis, _vp_vis)
                 _export_class(_obj)
         except Exception:
             continue
+
+# Add list UI and operators explicitly
+for _name in dir(_thr_ui):
+    _obj = getattr(_thr_ui, _name)
+    try:
+        import bpy
+        if isinstance(_obj, type) and (
+            issubclass(_obj, bpy.types.Operator) or issubclass(_obj, bpy.types.UIList)
+        ):
+            _export_class(_obj)
+    except Exception:
+        continue
 
 __all__ = [cls.__name__ for cls in EXPORTED_CLASSES]

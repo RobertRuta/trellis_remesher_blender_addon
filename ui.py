@@ -1,4 +1,5 @@
 import bpy
+from .utils import center_label
 
 
 class VIEW3D_PT_autormesher_api_settings(bpy.types.Panel):
@@ -133,42 +134,102 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         layout = self.layout
         props = context.scene.auto_remesher
         rprops = props.remesher
+        crease_count = rprops.crease_count
 
-        box = layout.box()
-        col = box.column(align=True)
-        col.label(text="Auto Crease Detection", icon='MOD_BEVEL')
-
+        ######################## Creasing Box ########################
+        
+        crease_definiton_box = layout.box()
+        crease_title_row = crease_definiton_box.row()
+        crease_title_row.alignment = 'CENTER'
+        crease_title_row.label(text="Creasing", icon='MOD_BEVEL')
+        
+        crease_definiton_box.separator()
+        
+        ############ Auto Crease Detection Box ############
+        
+        auto_detect_section = crease_definiton_box.box()
+        auto_detect_title_row = auto_detect_section.row()
+        auto_detect_title_row.alignment = 'CENTER'
+        auto_detect_title_row.label(text="Auto Crease Detection", icon='PRESET')
+        
         if not rprops.mesh or getattr(rprops.mesh, "type", None) != 'MESH':
-            col.label(text="No mesh loaded yet.", icon='INFO')
-            col.enabled = False
+            auto_detect_section.label(text="No mesh loaded yet.", icon='INFO')
+            auto_detect_section.enabled = False
             return
-
-        info = col.box()
-        info.label(text=f"Target: {rprops.mesh.name}")
-        info.label(text=f"Verts: {len(rprops.mesh.data.vertices)}  Faces: {len(rprops.mesh.data.polygons)}")
-
-        col.prop(rprops, "crease_angle_threshold")
-        col.prop(rprops, "crease_strength")
-        col.prop(rprops, "mark_boundary_as_crease")
-        col.prop(rprops, "clear_existing_creases")
-
-        row = col.row(align=True)
-        row.operator("auto_remesher.detect_creases", text="Detect Creases", icon='SELECT_DIFFERENCE')
-        row.operator("auto_remesher.clear_creases", text="Clear", icon='X')
-
-        col.separator()
-        col.prop(rprops, "show_crease_viz")
-        col.prop(rprops, "viz_threshold")
-        col.prop(rprops, "viz_thickness")
         
-        # Geometry Nodes visualization
-        gn_box = col.box()
-        gn_box.label(text="Geometry Nodes Visualization", icon='NODETREE')
-        gn_box.operator("auto_remesher.gn_crease_vis", text="Apply GN Visualisation", icon='SHADING_WIRE')
+        ###### Auto Crease Detection Info Box ######
+        info = auto_detect_section.box()
+
+        info.label(text="Info", icon="INFO_LARGE")
+        center_label(info, f"Target Mesh: {rprops.mesh.name}")
+        center_label(info, f"Crease Count: {crease_count}")
+        center_label(info, f"Crease Thresholds: {len(rprops.thresholds)}")
+
+        settings_section = auto_detect_section.box()
+        settings_section.label(text="Settings", icon="SETTINGS")
+        settings_section.prop(rprops, "mark_boundary_as_crease")
         
-        # Vertex Paint visualization
-        vp_box = col.box()
-        vp_box.label(text="Vertex Paint Visualization", icon='VPAINT_HLT')
-        vp_row = vp_box.row(align=True)
-        vp_row.operator("auto_remesher.vp_crease_vis", text="Apply VP Visualisation", icon='VPAINT_HLT')
-        vp_row.operator("auto_remesher.clear_vp_vis", text="Clear", icon='X')
+        ###### Single / Multi-Threshold Selector ######
+        thresholds_col = settings_section.column(align=True)
+        mode_row = thresholds_col.row(align=True)
+        mode_row.alignment = 'EXPAND'
+        mode_row.prop(rprops, "threshold_mode", expand=True)
+        # thresholds_section = settings_section.box()
+        thresholds_col.separator()
+        ### Single Threshold Config ###
+        if rprops.threshold_mode == 'SINGLE':
+            single_box = thresholds_col.box()
+            single_box.prop(rprops, "crease_angle_threshold")
+            single_box.prop(rprops, "crease_strength")
+            single_box.prop(rprops, "single_threshold_color")
+            gen_row = single_box.row()
+            gen_row.operator("auto_remesher.generate_finer_detail", text="Show Finer Detail", icon='DECORATE_OVERRIDE')
+
+        ### Multi-Thresholds Config ###
+        if rprops.threshold_mode == 'MULTI':
+            thresholds_col.label(text="Thresholds:")
+            list_row = thresholds_col.row()
+            list_row.template_list("AUTO_REMESHER_UL_thresholds", "", rprops, "thresholds", rprops, "thresholds_index", rows=3)
+            list_ops = list_row.column(align=True)
+            list_ops.operator("auto_remesher.threshold_add", icon='ADD', text="")
+            list_ops.operator("auto_remesher.threshold_remove", icon='REMOVE', text="")
+            list_ops.separator()
+            list_ops.separator()
+            list_ops.operator("auto_remesher.threshold_move", icon='TRIA_UP', text="").direction = 'UP'
+            list_ops.operator("auto_remesher.threshold_move", icon='TRIA_DOWN', text="").direction = 'DOWN'
+
+        ### Run / Clear Crease Detction Buttons ###
+        run_detect_box = auto_detect_section.box()
+        run_detect_box.label(text="Run", icon="PLAY")
+        # run_label_row = run_box.row()
+        # run_label_row.alignment = 'CENTER'
+        # run_label_row.label(text="Run", icon="PLAY")
+        run_auto_detect_row = run_detect_box.row()
+        run_label_txt = "Recalculate" if crease_count > 0 else "Detect Creases"            
+        run_auto_detect_row.operator("auto_remesher.detect_creases", text=run_label_txt, icon='MEMORY')
+        if crease_count > 0:
+            run_auto_detect_row.operator("auto_remesher.clear_creases", text="Clear", icon='X')
+        
+        crease_definiton_box.separator()
+        
+        ############ Crease Visualisation Box ############
+        
+        ###### Vertex Paint Visualisation Box ######
+        crease_vis_section = crease_definiton_box.box()
+        center_label(crease_vis_section, text="Crease Visualiser", icon="VPAINT_HLT")
+        
+        # ### Crease Visualisation Info Box ###
+        # info_vis_box = crease_vis_section.box()
+        # info_vis_box.label(text="Info", icon="INFO_LARGE")
+        # center_label(info_vis_box, f"")
+        
+        # ### Crease Visualisation Settings Box ###
+        # settings_vis_box = crease_vis_section.box()
+        # settings_vis_box.label(text="Settings", icon="SETTINGS")
+        
+        ### Crease Visualisation Run Box ###
+        run_vis_box = crease_vis_section.box()
+        run_vis_box.label(text="Run", icon="PLAY")
+        run_visualisation_row = run_vis_box.row()
+        run_visualisation_row.operator("auto_remesher.vp_crease_vis", text="Visualise", icon='PLAY')
+        run_visualisation_row.operator("auto_remesher.clear_vp_vis", text="Clear", icon='X')

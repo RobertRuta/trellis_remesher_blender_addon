@@ -101,6 +101,20 @@ class AutoRemesherGeneratorProperties(bpy.types.PropertyGroup):
     )
 
 
+class AutoRemesherThresholdItem(bpy.types.PropertyGroup):
+    angle_deg: bpy.props.FloatProperty(name="Angle (°)", default=20.0, min=0.0, max=180.0)
+    strength: bpy.props.FloatProperty(name="Strength", default=1.0, min=0.0, max=1.0)
+    color: bpy.props.FloatVectorProperty(
+        name="Color",
+        subtype='COLOR',
+        size=4,
+        min=0.0,
+        max=1.0,
+        default=(1.0, 0.0, 0.0, 1.0)
+    )
+    uid: bpy.props.IntProperty(name="UID", default=0)
+
+
 class AutoRemesherRemesherProperties(bpy.types.PropertyGroup):
     """Remesher target selection and detection settings."""
 
@@ -122,6 +136,13 @@ class AutoRemesherRemesherProperties(bpy.types.PropertyGroup):
         default=1.0, min=0.0, max=1.0
     )
 
+    single_threshold_color: bpy.props.FloatVectorProperty(
+        name="Crease Color",
+        description="Color used for single-threshold visualization and as a base for generated sub-thresholds",
+        subtype='COLOR', size=4, min=0.0, max=1.0,
+        default=(1.0, 0.3, 0.3, 1.0)
+    )
+
     mark_boundary_as_crease: bpy.props.BoolProperty(
         name="Treat Boundary as Crease",
         description="Mark open boundary edges as creases",
@@ -134,23 +155,27 @@ class AutoRemesherRemesherProperties(bpy.types.PropertyGroup):
         default=True
     )
 
-    # Visualization settings
-    show_crease_viz: bpy.props.BoolProperty(
-        name="Show Crease Viz",
-        description="Overlay crease edges using Geometry Nodes",
-        default=False
+    # Dynamic threshold list
+    thresholds: bpy.props.CollectionProperty(type=AutoRemesherThresholdItem)
+    thresholds_index: bpy.props.IntProperty(name="Active Threshold", default=0)
+    threshold_next_id: bpy.props.IntProperty(name="Next UID", default=1)
+
+    # Threshold mode: single or multi
+    threshold_mode: bpy.props.EnumProperty(
+        name="Threshold Mode",
+        description="Choose between single threshold (basic settings) or multi-threshold list",
+        items=[
+            ('SINGLE', "Single", "Use a single angle/strength"),
+            ('MULTI', "Multi", "Use the dynamic thresholds list"),
+        ],
+        default='MULTI'
     )
 
-    viz_threshold: bpy.props.FloatProperty(
-        name="Viz Threshold",
-        description="Only visualize creases with value >= this threshold",
-        default=0.5, min=0.0, max=1.0
-    )
-
-    viz_thickness: bpy.props.FloatProperty(
-        name="Viz Thickness",
-        description="Thickness of crease visualization (in Blender units)",
-        default=0.01, min=0.0, soft_max=0.2
+    # Stats
+    crease_count: bpy.props.IntProperty(
+        name="Crease Count",
+        description="Total number of edges currently marked as creases (crease_edge > 0)",
+        default=0, min=0
     )
 
 
