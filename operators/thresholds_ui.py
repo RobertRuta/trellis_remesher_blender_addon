@@ -10,9 +10,9 @@ class AUTO_REMESHER_UL_thresholds(bpy.types.UIList):
         if item is None:
             return
         row = layout.row(align=True)
+        row.label(text=f"L{item.layer_number}")
         row.prop(item, "angle_deg", text="°")
         row.prop(item, "color", text="")
-        row.label(text=f"L{item.layer_number}")
 
 
 class AUTO_REMESHER_OT_threshold_add(bpy.types.Operator):
