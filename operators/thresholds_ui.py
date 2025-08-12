@@ -1,6 +1,6 @@
 import random
 import bpy
-
+from ..properties.remesher import add_threshold, update_thresholds
 
 # TODO: Need to ensure these are locked to multi mode
 class AUTO_REMESHER_UL_thresholds(bpy.types.UIList):
@@ -104,21 +104,3 @@ class AUTO_REMESHER_OT_set_threshold_mode(bpy.types.Operator):
         rprops = context.scene.auto_remesher.remesher
         rprops.is_single_threshold = self.use_single
         return {'FINISHED'}
-
-
-# Helper to add threshold
-def add_threshold(thresholds, angle_deg: float, color_rgba):
-    threshold = thresholds.add()
-    threshold.angle_deg = angle_deg
-    threshold.color = color_rgba
-    return threshold
-
-def update_thresholds(thresholds):
-    """Reassign layer_number based on descending angle, without touching other values."""
-    # Sort actual item references by angle
-    sorted_items = sorted(thresholds, key=lambda t: t.angle_deg, reverse=True)
-
-    # Assign new layer numbers
-    for new_layer, t in enumerate(sorted_items):
-        t.layer_number = new_layer
-

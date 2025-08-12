@@ -54,3 +54,20 @@ class AutoRemesherRemesherProperties(bpy.types.PropertyGroup):
         description="Total number of edges currently marked as creases (crease_layer > 0)",
         default=0, min=0
     )
+    
+
+# Helper to add threshold
+def add_threshold(thresholds, angle_deg: float, color_rgba):
+    threshold = thresholds.add()
+    threshold.angle_deg = angle_deg
+    threshold.color = color_rgba
+    return threshold
+
+def update_thresholds(thresholds):
+    """Reassign layer_number based on descending angle, without touching other values."""
+    # Sort actual item references by angle
+    sorted_items = sorted(thresholds, key=lambda t: t.angle_deg, reverse=True)
+
+    # Assign new layer numbers
+    for new_layer, t in enumerate(sorted_items):
+        t.layer_number = new_layer
