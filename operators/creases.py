@@ -114,6 +114,7 @@ class AUTO_REMESHER_OT_clear_creases(bpy.types.Operator):
             mesh = obj.data
             crease_layer_attr = mesh.attributes.get('crease_layer')
             crease_layer_attr.data.foreach_set("value", [-1]*len(mesh.edges))
+            rprops.crease_count = 0
 
             self.report({'INFO'}, "All crease layers cleared")
             return {'FINISHED'}
