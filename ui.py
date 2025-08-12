@@ -134,6 +134,7 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         layout = self.layout
         props = context.scene.auto_remesher
         rprops = props.remesher
+        thresholds = [rprops.single_threshold] if rprops.is_single_threshold else rprops.multi_thresholds
         crease_count = rprops.crease_count
 
         ######################## Creasing Box ########################
@@ -163,7 +164,7 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         info.label(text="Info", icon="INFO_LARGE")
         center_label(info, f"Target Mesh: {rprops.mesh.name}")
         center_label(info, f"Crease Count: {crease_count}")
-        center_label(info, f"Crease Thresholds: {len(rprops.thresholds)}")
+        center_label(info, f"Crease Layers: {len(thresholds)}")
 
         settings_section = auto_detect_section.box()
         settings_section.label(text="Settings", icon="SETTINGS")
@@ -173,37 +174,31 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         thresholds_col = settings_section.column(align=True)
         mode_row = thresholds_col.row(align=True)
         mode_row.alignment = 'EXPAND'
-        mode_row.prop(rprops, "threshold_mode", expand=True)
+        # "Single" button
+        mode_row.operator("auto_remesher.set_threshold_mode", text="Single", depress=rprops.is_single_threshold).use_single = True
+        # "Multi" button
+        mode_row.operator("auto_remesher.set_threshold_mode", text="Multi", depress=not rprops.is_single_threshold).use_single = False
         # thresholds_section = settings_section.box()
         thresholds_col.separator()
         ### Single Threshold Config ###
-        if rprops.threshold_mode == 'SINGLE':
+        if rprops.is_single_threshold:
             single_box = thresholds_col.box()
             single_box.prop(rprops, "crease_angle_threshold")
-            single_box.prop(rprops, "crease_strength")
             single_box.prop(rprops, "single_threshold_color")
             gen_row = single_box.row()
             gen_row.operator("auto_remesher.generate_finer_detail", text="Show Finer Detail", icon='DECORATE_OVERRIDE')
-
         ### Multi-Thresholds Config ###
-        if rprops.threshold_mode == 'MULTI':
+        else:
             thresholds_col.label(text="Thresholds:")
             list_row = thresholds_col.row()
-            list_row.template_list("AUTO_REMESHER_UL_thresholds", "", rprops, "thresholds", rprops, "thresholds_index", rows=3)
+            list_row.template_list("AUTO_REMESHER_UL_thresholds", "", rprops, "multi_thresholds", rprops, "thresholds_index", rows=3)
             list_ops = list_row.column(align=True)
             list_ops.operator("auto_remesher.threshold_add", icon='ADD', text="")
             list_ops.operator("auto_remesher.threshold_remove", icon='REMOVE', text="")
-            # list_ops.separator()
-            list_ops.operator("auto_remesher.threshold_autoreorder", icon='SORTSIZE', text="")
-            list_ops.operator("auto_remesher.threshold_move", icon='TRIA_UP', text="").direction = 'UP'
-            list_ops.operator("auto_remesher.threshold_move", icon='TRIA_DOWN', text="").direction = 'DOWN'
 
         ### Run / Clear Crease Detction Buttons ###
         run_detect_box = auto_detect_section.box()
         run_detect_box.label(text="Run", icon="PLAY")
-        # run_label_row = run_box.row()
-        # run_label_row.alignment = 'CENTER'
-        # run_label_row.label(text="Run", icon="PLAY")
         run_auto_detect_row = run_detect_box.row()
         run_label_txt = "Recalculate" if crease_count > 0 else "Detect Creases"            
         run_auto_detect_row.operator("auto_remesher.detect_creases", text=run_label_txt, icon='MEMORY')
