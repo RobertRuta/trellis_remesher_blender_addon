@@ -1,20 +1,29 @@
 import math
 import bpy
 import bmesh
+from array import array
 
 
 class AUTO_REMESHER_OT_detect_creases(bpy.types.Operator):
     bl_idname = "auto_remesher.detect_creases"
     bl_label = "Detect Creases"
-    bl_description = "Detect hard edges by dihedral angle and set edge creases"
+    bl_description = "Detect hard edges by dihedral angle and set edge crease layers"
 
     def execute(self, context):
         props = context.scene.auto_remesher
         rprops = props.remesher
-        obj = rprops.mesh or context.object
 
+        # Get mesh
+        obj = rprops.mesh or context.object
         if not obj or obj.type != 'MESH':
             self.report({'ERROR'}, "No mesh selected")
+            return {'CANCELLED'}
+        
+        # Preparing crease angle thresholds
+        thresholds = [rprops.single_threshold] if rprops.is_single_threshold else rprops.multi_thresholds
+        threshold_count = len(thresholds)
+        if thresholds is None or threshold_count < 1:
+            self.report({'ERROR'}, "No thresholds provided")
             return {'CANCELLED'}
 
         mesh = obj.data
@@ -30,83 +39,64 @@ class AUTO_REMESHER_OT_detect_creases(bpy.types.Operator):
             bm.edges.ensure_lookup_table()
             bm.normal_update()
 
-            crease_layer = bm.edges.layers.float.get('crease_edge')
-            if crease_layer is None:
-                crease_layer = bm.edges.layers.float.new('crease_edge')
+            crease_layer_attr_name = 'crease_layer'
+            crease_layer_attr = mesh.attributes.get(crease_layer_attr_name)
+            if crease_layer_attr is None:
+                crease_layer_attr = mesh.attributes.new(crease_layer_attr_name, type='INT8', domain='EDGE')
+            
+            edge_crease_layer_buffer = array('b', [-1] * len(mesh.edges))
 
-            if rprops.clear_existing_creases:
-                for e in bm.edges:
-                    e[crease_layer] = 0.0
-
+            # Iterate over edges in mesh and set crease layer
             detected = 0
             for e in bm.edges:
-                lf = e.link_faces
+                detected_layer = -1  # -1 means no layer assigned
                 is_boundary = False
+                attached_faces = e.link_faces
+                
                 # Mesh boundary -- edge has one attached face
-                if len(lf) == 1 and rprops.mark_boundary_as_crease:
+                if len(attached_faces) == 1 and rprops.mark_boundary_as_crease:
                     is_boundary = True
+                    detected_layer = 0  # Boundary edges get layer 0
                 # Standard edge with 2 faces attached
-                elif len(lf) == 2:
-                    dot = max(-1.0, min(1.0, lf[0].normal.dot(lf[1].normal)))
+                elif len(attached_faces) == 2:
+                    # Calculate angle between attached faces
+                    dot = max(-1.0, min(1.0, attached_faces[0].normal.dot(attached_faces[1].normal)))
                     angle_deg = math.degrees(math.acos(dot))
-                    best_strength = 0.0
-                    if getattr(rprops, 'threshold_mode', 'MULTI') == 'MULTI':
-                        # Choose the strongest threshold whose angle is <= the edge angle
-                        for item in sorted(rprops.thresholds, key=lambda t: float(t.angle_deg), reverse=True):
-                            if angle_deg >= float(item.angle_deg):
-                                best_strength = float(item.strength)
-                                break
-                    else:
-                        # Single threshold mode
-                        if angle_deg >= float(rprops.crease_angle_threshold):
-                            best_strength = float(rprops.crease_strength)
+                    
+                    # Find the lowest layer number (largest angle) that matches this edge
+                    for threshold in thresholds:
+                        if angle_deg >= float(threshold.angle_deg):
+                            detected_layer = int(threshold.layer_number)
+                            break
 
-                if is_boundary or best_strength > 0.0:
-                    e[crease_layer] = 1.0 if is_boundary else best_strength
+                if is_boundary or detected_layer >= 0:
+                    edge_crease_layer_buffer[e.index] = detected_layer
                     detected += 1
-
-            if is_edit:
+            
+            # Set crease count in properties
+            rprops.crease_count = detected
+            
+            crease_layer_attr.data.foreach_set("value", edge_crease_layer_buffer)
+            
+            if obj.mode == 'EDIT':
                 bmesh.update_edit_mesh(mesh, loop_triangles=False, destructive=False)
-                bm = bmesh.from_edit_mesh(mesh)
-                _sync_bmesh_edge_layer_to_mesh_attribute(mesh, bm, "crease_edge")
             else:
-                bm.to_mesh(mesh)
-                bm.free()
                 mesh.update()
-                bm2 = bmesh.new()
-                bm2.from_mesh(mesh)
-                _sync_bmesh_edge_layer_to_mesh_attribute(mesh, bm2, "crease_edge")
-                bm2.free()
-
-            # Update crease count stat on properties
-            try:
-                attr = mesh.attributes.get('crease_edge')
-                if attr is not None:
-                    values = [0.0] * len(mesh.edges)
-                    attr.data.foreach_get("value", values)
-                    crease_count = sum(1 for v in values if v > 0.0)
-                    rprops.crease_count = int(crease_count)
-            except Exception:
-                pass
-
-            # Auto-run visualiser after calculating creases
-            try:
-                bpy.ops.auto_remesher.vp_crease_vis()
-            except Exception:
-                pass
-
-            self.report({'INFO'}, f"Creases set on {detected} edges")
-            return {'FINISHED'}
-
+                
+            self.report({'INFO'}, f"Crease layers set on {rprops.crease_count} edges")
         except Exception as e:
             self.report({'ERROR'}, f"Crease detection failed: {e}")
             return {'CANCELLED'}
+
+        # Auto-run visualiser after calculating creases
+        bpy.ops.auto_remesher.vp_crease_vis()
+        return {'FINISHED'}
 
 
 class AUTO_REMESHER_OT_clear_creases(bpy.types.Operator):
     bl_idname = "auto_remesher.clear_creases"
     bl_label = "Clear Creases"
-    bl_description = "Clear all edge creases on the selected mesh"
+    bl_description = "Clear all edge crease layers on the selected mesh"
 
     def execute(self, context):
         props = context.scene.auto_remesher
@@ -116,60 +106,18 @@ class AUTO_REMESHER_OT_clear_creases(bpy.types.Operator):
             self.report({'ERROR'}, "No mesh selected")
             return {'CANCELLED'}
 
-        mesh = obj.data
+        if rprops.crease_count == 0:
+            self.report({'INFO'}, "No creases to clear")
+            return {'FINISHED'}
+
         try:
-            is_edit = (obj.mode == 'EDIT')
-            if is_edit:
-                bm = bmesh.from_edit_mesh(mesh)
-            else:
-                bm = bmesh.new()
-                bm.from_mesh(mesh)
+            mesh = obj.data
+            crease_layer_attr = mesh.attributes.get('crease_layer')
+            crease_layer_attr.data.foreach_set("value", [-1]*len(mesh.edges))
 
-            bm.edges.ensure_lookup_table()
-            crease_layer = bm.edges.layers.float.get('crease_edge')
-            if crease_layer is None:
-                crease_layer = bm.edges.layers.float.new('crease_edge')
-            for e in bm.edges:
-                e[crease_layer] = 0.0
-
-            if is_edit:
-                bmesh.update_edit_mesh(mesh, loop_triangles=False, destructive=False)
-                bm = bmesh.from_edit_mesh(mesh)
-                _sync_bmesh_edge_layer_to_mesh_attribute(mesh, bm, "crease_edge")
-            else:
-                bm.to_mesh(mesh)
-                bm.free()
-                mesh.update()
-                bm2 = bmesh.new()
-                bm2.from_mesh(mesh)
-                _sync_bmesh_edge_layer_to_mesh_attribute(mesh, bm2, "crease_edge")
-                bm2.free()
-
-            # Reset crease count stat
-            try:
-                rprops.crease_count = 0
-            except Exception:
-                pass
-
-            self.report({'INFO'}, "All creases cleared")
+            self.report({'INFO'}, "All crease layers cleared")
             return {'FINISHED'}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Clear creases failed: {e}")
+            self.report({'ERROR'}, f"Failed to clear creases: {e}")
             return {'CANCELLED'}
-
-
-def _sync_bmesh_edge_layer_to_mesh_attribute(mesh, bm, layer_name="crease_edge"):
-    bm.edges.index_update()
-    crease_layer = bm.edges.layers.float.get(layer_name)
-    if crease_layer is None:
-        return
-    attr = mesh.attributes.get(layer_name)
-    if attr is None:
-        attr = mesh.attributes.new(name=layer_name, type='FLOAT', domain='EDGE')
-    values = [0.0] * len(mesh.edges)
-    for e in bm.edges:
-        values[e.index] = float(e[crease_layer])
-    attr.data.foreach_set("value", values)
-
-
