@@ -4,7 +4,7 @@ import bpy
 class AutoRemesherThresholdItem(bpy.types.PropertyGroup):
     angle_deg: bpy.props.FloatProperty(name="Angle (°)", default=20.0, min=0.0, max=180.0)
     color: bpy.props.FloatVectorProperty(
-        name="Color",
+        name="color",
         subtype='COLOR',
         size=4,
         min=0.0,

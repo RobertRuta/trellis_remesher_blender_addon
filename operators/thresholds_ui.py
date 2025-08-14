@@ -29,8 +29,8 @@ class AUTO_REMESHER_OT_threshold_add(bpy.types.Operator):
             new_angle = thresholds[-1].angle_deg / 2
         else:
             new_angle = 20
-        random_colour = (random.random(), random.random(), random.random(), 1.0)
-        threshold = add_threshold(thresholds, new_angle, random_colour)
+        random_color = (random.random(), random.random(), random.random(), 1.0)
+        threshold = add_threshold(thresholds, new_angle, random_color)
         update_thresholds(thresholds)
         
         # Select the newly added item
