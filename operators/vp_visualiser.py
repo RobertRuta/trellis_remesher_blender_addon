@@ -107,7 +107,7 @@ class AUTO_REMESHER_OT_vp_crease_visualiser(bpy.types.Operator):
                 bpy.ops.object.mode_set(mode='EDIT')
             
             # Switch to the active crease layer
-            bpy.ops.auto_remesher.switch_crease_display(layer_index=rprops.active_crease_layer_display)
+            bpy.ops.auto_remesher.switch_crease_display(display_layer_index=rprops.active_crease_layer_display)
             
             self.report({'INFO'}, "Successfully created attributes.")
             return {'FINISHED'}
