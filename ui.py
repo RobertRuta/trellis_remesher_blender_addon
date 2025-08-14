@@ -134,8 +134,10 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         layout = self.layout
         props = context.scene.auto_remesher
         rprops = props.remesher
+        
         thresholds = [rprops.single_threshold] if rprops.is_single_threshold else rprops.multi_thresholds
         crease_count = rprops.crease_count
+        selected_layer = rprops.active_crease_layer_display
 
         ######################## Creasing Box ########################
         
@@ -213,14 +215,52 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         crease_vis_section = crease_definiton_box.box()
         center_label(crease_vis_section, text="Crease Visualiser", icon="VPAINT_HLT")
         
-        # ### Crease Visualisation Info Box ###
-        # info_vis_box = crease_vis_section.box()
-        # info_vis_box.label(text="Info", icon="INFO_LARGE")
-        # center_label(info_vis_box, f"")
+        ### Crease Visualisation Info Box ###
+        info_vis_box = crease_vis_section.box()
+        info_vis_box.label(text="Info", icon="INFO_LARGE")
+        center_label(info_vis_box, f"Crease layers: {len(thresholds)}")
+        center_label(info_vis_box, f"Selected layers: {rprops.active_crease_layer_display + 1 if rprops.active_crease_layer_display >= 0 else 'All'}")
+        drawn_layer_count = 0
+        if selected_layer == -1:
+            drawn_layer_count = len(thresholds)
+        elif rprops.accumulate_lower_layers:
+            drawn_layer_count = selected_layer + 1
+        else:
+            drawn_layer_count = 1
+        center_label(info_vis_box, f"Layers drawn: {drawn_layer_count}")
         
         # ### Crease Visualisation Settings Box ###
         # settings_vis_box = crease_vis_section.box()
         # settings_vis_box.label(text="Settings", icon="SETTINGS")
+        
+        ### Layer Switcher ###
+        # Accumulate Previous Layers Switch
+        layer_selector_box = crease_vis_section.box()
+        layer_selector_box.label(text="Display Layer", icon="SEQ_STRIP_DUPLICATE")
+        layer_selector_box.prop(rprops, "accumulate_lower_layers")
+        
+        # "All" button on its own row
+        all_row = layer_selector_box.row()
+        all_btn = all_row.operator("auto_remesher.switch_crease_display", text="All")
+        all_btn.display_layer_index = -1
+        if rprops.active_crease_layer_display != -1:
+            all_row.active = False
+        
+        # Layers arranged in a column
+        layers_col = layer_selector_box.column(align=True)
+        for i, thr in enumerate(thresholds):
+            layer_row = layers_col.row(align=True)
+            # Color swatch (small colored box)
+            color_box = layer_row.row(align=True)
+            color_box.scale_x = 0.3
+            color_box.prop(thr, "color", text="")
+            color_box.enabled = False  # Make it display-only
+            # Layer toggle
+            btn_box = layer_row.row(align=True)
+            btn = btn_box.operator("auto_remesher.switch_crease_display", text=f"L{i}")
+            btn.display_layer_index = i
+            if rprops.active_crease_layer_display != i and rprops.active_crease_layer_display != -1:
+                btn_box.active = False
         
         ### Crease Visualisation Run Box ###
         run_vis_box = crease_vis_section.box()
