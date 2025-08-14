@@ -23,4 +23,7 @@ As a proof of concept, Auto-Remesher is current offered as a Blender addon (when
 
 ### Advantages Over Other Remeshers [WIP]
 
-Instant Meshes fail to repair holes in generated meshes.
+- No remeshing pipeline exists that specifically addresses the topological issues of 3D generated meshes.
+- Automated but artist friendly in usage and installation.
+- Instant Meshes fail to repair holes in generated meshes.
+- Most remeshers are closed source.
