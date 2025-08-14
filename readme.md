@@ -27,3 +27,8 @@ As a proof of concept, Auto-Remesher is current offered as a Blender addon (when
 - Automated but artist friendly in usage and installation.
 - Instant Meshes fail to repair holes in generated meshes.
 - Most remeshers are closed source.
+
+### Showcase
+
+![Generated mesh pre-processing](_gallery/image1.png)
+![Generated mesh crease detection](_gallery/image2.png)
