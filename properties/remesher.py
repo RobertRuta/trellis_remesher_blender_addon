@@ -18,8 +18,8 @@ class AutoRemesherRemesherProperties(bpy.types.PropertyGroup):
     )
 
     single_threshold_color: bpy.props.FloatVectorProperty(
-        name="Crease Color",
-        description="Color used for single-threshold visualization and as a base for generated sub-thresholds",
+        name="Crease color",
+        description="color used for single-threshold visualization and as a base for generated sub-thresholds",
         subtype='COLOR', size=4, min=0.0, max=1.0,
         default=(1.0, 0.3, 0.3, 1.0)
     )
@@ -53,6 +53,29 @@ class AutoRemesherRemesherProperties(bpy.types.PropertyGroup):
         name="Crease Count",
         description="Total number of edges currently marked as creases (crease_layer > 0)",
         default=0, min=0
+    )
+    
+    # Currently selected crease layer to display
+    active_crease_layer_display: bpy.props.IntProperty(
+        name="Active Crease Layer Display",
+        description="Currently displayed crease layer index (-1 = All)",
+        default=-1, min=-1
+    )
+
+    # Re-run visualisation when visualisation logic changes
+    def _update_accumulate(self, context):
+        try:
+            # Rebuild per-layer attributes according to the new mode
+            bpy.ops.auto_remesher.vp_crease_vis()
+        except Exception:
+            pass
+
+    # Whether to accumulate lower layers when viewing a specific layer
+    accumulate_lower_layers: bpy.props.BoolProperty(
+        name="Accumulate Lower Layers",
+        description="When viewing a layer L, also show layers < L",
+        default=False,
+        update=_update_accumulate
     )
     
 
