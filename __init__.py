@@ -6,6 +6,7 @@ from .properties import (
     AutoRemesherServerProperties,
     AutoRemesherGeneratorProperties,
     AutoRemesherThresholdItem,
+    AutoRemesherLayerItem,
     AutoRemesherRemesherProperties,
     AutoRemesherProperties,
 )
@@ -26,6 +27,7 @@ _property_classes_in_order = (
     AutoRemesherServerProperties,
     AutoRemesherGeneratorProperties,
     AutoRemesherThresholdItem,
+    AutoRemesherLayerItem,
     AutoRemesherRemesherProperties,
     AutoRemesherProperties,
 )

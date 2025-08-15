@@ -1,6 +1,6 @@
 import random
 import bpy
-from ..properties.remesher import add_threshold, update_thresholds
+from ..properties.remesher import add_crease_threshold, update_thresholds
 
 # TODO: Need to ensure these are locked to multi mode
 class AUTO_REMESHER_UL_thresholds(bpy.types.UIList):
@@ -10,9 +10,46 @@ class AUTO_REMESHER_UL_thresholds(bpy.types.UIList):
         if item is None:
             return
         row = layout.row(align=True)
-        row.label(text=f"L{item.layer_number}")
-        row.prop(item, "angle_deg", text="°")
+        layer_id = row.row(align=True)
+        layer_id.ui_units_x = 15
+        layer_id.label(text=f"L{item.layer_id}")
+        angle = row.row(align=True)
+        angle.ui_units_x = 20
+        angle.prop(item, "angle_deg", text="°")
         row.prop(item, "color", text="")
+
+
+class AUTO_REMESHER_UL_layers(bpy.types.UIList):
+    bl_idname = "AUTO_REMESHER_UL_layers"
+
+    # Optional: nicer spacing across compact rows
+    use_filter_show = False
+
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        if not item:
+            return
+
+        # Main row
+        row = layout.row(align=True)
+
+        # 1) Layer number (fixed width)
+        layer_id = row.row(align=True)
+        layer_id.ui_units_x = 0.15
+        layer_id.label(text=f"L{item.layer_id}")
+
+        # 2) Eye toggle (always enabled)
+        row.prop(
+            item, "is_visible",
+            text="",
+            emboss=True,
+            icon=('HIDE_OFF' if item.is_visible else 'HIDE_ON')
+        )
+
+        # 3) Everything else is disabled when not visible
+        color_box = row.row(align=True)
+        color_box.ui_units_x = 0.85
+        color_box.prop(item, "color", text="")
+        color_box.enabled = item.is_visible
 
 
 class AUTO_REMESHER_OT_threshold_add(bpy.types.Operator):
@@ -30,13 +67,13 @@ class AUTO_REMESHER_OT_threshold_add(bpy.types.Operator):
         else:
             new_angle = 20
         random_color = (random.random(), random.random(), random.random(), 1.0)
-        threshold = add_threshold(thresholds, new_angle, random_color)
+        threshold = add_crease_threshold(thresholds, new_angle, random_color)
         update_thresholds(thresholds)
         
         # Select the newly added item
-        rprops.thresholds_index = threshold.layer_number
+        rprops.thresholds_index = threshold.layer_id
         
-        self.report({'INFO'}, f"Added threshold at {threshold.layer_number} with angle {threshold.angle_deg}°")
+        self.report({'INFO'}, f"Added threshold at {threshold.layer_id} with angle {threshold.angle_deg}°")
         return {'FINISHED'}
 
 
@@ -80,15 +117,15 @@ class AUTO_REMESHER_OT_generate_finer_detail(bpy.types.Operator):
         thresholds.clear()
 
         # Add thresholds in list order: base, half, quarter
-        add_threshold(thresholds, base_angle, (r, g, b, a))
-        add_threshold(thresholds, base_angle * 0.5, shade1)
-        last_added_threshold = add_threshold(thresholds, base_angle * 0.25, shade2)
+        add_crease_threshold(thresholds, base_angle, (r, g, b, a))
+        add_crease_threshold(thresholds, base_angle * 0.5, shade1)
+        last_added_threshold = add_crease_threshold(thresholds, base_angle * 0.25, shade2)
 
         # Update layer numbers after generating thresholds
         update_thresholds(thresholds)
 
         # Select the last added
-        rprops.thresholds_index = last_added_threshold.layer_number
+        rprops.thresholds_index = last_added_threshold.layer_id
 
         self.report({'INFO'}, "Generated finer detail thresholds and switched to Multi mode")
         return {'FINISHED'}

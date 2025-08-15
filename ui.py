@@ -173,26 +173,26 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         settings_section.prop(rprops, "mark_boundary_as_crease")
         
         ###### Single / Multi-Threshold Selector ######
-        thresholds_col = settings_section.column(align=True)
-        mode_row = thresholds_col.row(align=True)
+        layers_col = settings_section.column(align=True)
+        mode_row = layers_col.row(align=True)
         mode_row.alignment = 'EXPAND'
         # "Single" button
         mode_row.operator("auto_remesher.set_threshold_mode", text="Single", depress=rprops.is_single_threshold).use_single = True
         # "Multi" button
         mode_row.operator("auto_remesher.set_threshold_mode", text="Multi", depress=not rprops.is_single_threshold).use_single = False
         # thresholds_section = settings_section.box()
-        thresholds_col.separator()
+        layers_col.separator()
         ### Single Threshold Config ###
         if rprops.is_single_threshold:
-            single_box = thresholds_col.box()
+            single_box = layers_col.box()
             single_box.prop(rprops, "crease_angle_threshold")
             single_box.prop(rprops, "single_threshold_color")
             gen_row = single_box.row()
             gen_row.operator("auto_remesher.generate_finer_detail", text="Show Finer Detail", icon='DECORATE_OVERRIDE')
         ### Multi-Thresholds Config ###
         else:
-            thresholds_col.label(text="Thresholds:")
-            list_row = thresholds_col.row()
+            layers_col.label(text="Thresholds:")
+            list_row = layers_col.row()
             list_row.template_list("AUTO_REMESHER_UL_thresholds", "", rprops, "multi_thresholds", rprops, "thresholds_index", rows=3)
             list_ops = list_row.column(align=True)
             list_ops.operator("auto_remesher.threshold_add", icon='ADD', text="")
@@ -241,26 +241,19 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         
         # "All" button on its own row
         all_row = layer_selector_box.row()
-        all_btn = all_row.operator("auto_remesher.switch_crease_display", text="All")
+        all_btn = all_row.operator("auto_remesher.change_visible_layers", text="All")
         all_btn.display_layer_index = -1
         if rprops.active_crease_layer_display != -1:
             all_row.active = False
         
         # Layers arranged in a column
         layers_col = layer_selector_box.column(align=True)
-        for i, thr in enumerate(thresholds):
-            layer_row = layers_col.row(align=True)
-            # Color swatch (small colored box)
-            color_box = layer_row.row(align=True)
-            color_box.scale_x = 0.3
-            color_box.prop(thr, "color", text="")
-            color_box.enabled = False  # Make it display-only
-            # Layer toggle
-            btn_box = layer_row.row(align=True)
-            btn = btn_box.operator("auto_remesher.switch_crease_display", text=f"L{i}")
-            btn.display_layer_index = i
-            if rprops.active_crease_layer_display != i and rprops.active_crease_layer_display != -1:
-                btn_box.active = False
+        layers_col.label(text="Thresholds:")
+        list_row = layers_col.row()
+        list_row.template_list("AUTO_REMESHER_UL_layers", "", rprops, "crease_layers", rprops, "crease_layers_index", rows=4)
+        list_ops = list_row.column(align=True)
+        # list_ops.operator("auto_remesher.threshold_add", icon='ADD', text="")
+        # list_ops.operator("auto_remesher.threshold_remove", icon='REMOVE', text="")
         
         ### Crease Visualisation Run Box ###
         run_vis_box = crease_vis_section.box()

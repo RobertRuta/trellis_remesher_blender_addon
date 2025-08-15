@@ -66,7 +66,7 @@ class AUTO_REMESHER_OT_detect_creases(bpy.types.Operator):
                     # Find the lowest layer number (largest angle) that matches this edge
                     for threshold in thresholds:
                         if angle_deg >= float(threshold.angle_deg):
-                            detected_layer = int(threshold.layer_number)
+                            detected_layer = int(threshold.layer_id)
                             break
 
                 if is_boundary or detected_layer >= 0:

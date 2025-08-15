@@ -1,5 +1,5 @@
 import bpy
-from .thresholds import AutoRemesherThresholdItem
+from .thresholds import AutoRemesherThresholdItem, AutoRemesherLayerItem
 
 
 class AutoRemesherRemesherProperties(bpy.types.PropertyGroup):
@@ -40,6 +40,8 @@ class AutoRemesherRemesherProperties(bpy.types.PropertyGroup):
     single_threshold: bpy.props.PointerProperty(type=AutoRemesherThresholdItem)
     multi_thresholds: bpy.props.CollectionProperty(type=AutoRemesherThresholdItem)
     thresholds_index: bpy.props.IntProperty(name="Active Threshold", default=0)
+    crease_layers   : bpy.props.CollectionProperty(type=AutoRemesherLayerItem)
+    crease_layers_index   : bpy.props.IntProperty(name="Active Layer", default=0)
 
     # Threshold mode: single or multi
     is_single_threshold: bpy.props.BoolProperty(
@@ -80,17 +82,33 @@ class AutoRemesherRemesherProperties(bpy.types.PropertyGroup):
     
 
 # Helper to add threshold
-def add_threshold(thresholds, angle_deg: float, color_rgba):
+def add_crease_threshold(thresholds, angle_deg: float, color_rgba):
     threshold = thresholds.add()
     threshold.angle_deg = angle_deg
     threshold.color = color_rgba
     return threshold
 
 def update_thresholds(thresholds):
-    """Reassign layer_number based on descending angle, without touching other values."""
+    """Reassign layer_id based on descending angle, without touching other values."""
     # Sort actual item references by angle
     sorted_items = sorted(thresholds, key=lambda t: t.angle_deg, reverse=True)
 
     # Assign new layer numbers
     for new_layer, t in enumerate(sorted_items):
-        t.layer_number = new_layer
+        t.layer_id = new_layer
+
+
+def add_crease_layer(crease_layers, color_rgba, is_active):
+    crease_layers = crease_layers.add()
+    crease_layers.color = color_rgba
+    crease_layers.is_active = is_active
+    return crease_layers
+
+
+def add_crease_layer_from_threshold(crease_layers, threshold: AutoRemesherThresholdItem, is_active: bool = True, set_layer_id: bool = True):
+    crease_layers = crease_layers.add()
+    if set_layer_id:
+        crease_layers.layer_id = threshold.layer_id
+    crease_layers.color = threshold.color
+    crease_layers.is_active = is_active
+    return crease_layers
