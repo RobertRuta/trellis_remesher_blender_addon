@@ -134,7 +134,7 @@ class AUTO_REMESHER_OT_vp_crease_visualiser(bpy.types.Operator):
                 bpy.ops.object.mode_set(mode='EDIT')
             
             # Switch to the active crease layer
-            bpy.ops.auto_remesher.change_visible_layers(display_layer_index=rprops.active_crease_layer_display)
+            bpy.ops.auto_remesher.change_visible_layers()
             
             self.report({'INFO'}, "Successfully created attributes.")
             return {'FINISHED'}
@@ -190,8 +190,6 @@ class AUTO_REMESHER_OT_change_visible_layers(bpy.types.Operator):
     bl_label = "Switch Crease Display"
     bl_description = "Switch the visible crease_color attribute between All and a specific layer"
 
-    display_layer_index: bpy.props.IntProperty(default=-1, min=-1)
-
     def execute(self, context):
         props = context.scene.auto_remesher
         rprops = props.remesher
@@ -217,8 +215,9 @@ class AUTO_REMESHER_OT_change_visible_layers(bpy.types.Operator):
             return attr
 
         # Get attributes from mesh
+        display_layer_index = rprops.crease_layers_index
         display_attr = get_attr("display_crease_color")
-        selected_attr = get_attr("all_crease_color") if self.display_layer_index == -1 else get_attr(f"L{self.display_layer_index}_crease_color")
+        selected_attr = get_attr("all_crease_color") if display_layer_index == -1 else get_attr(f"L{display_layer_index}_crease_color")
         if selected_attr is None or display_attr is None:
             return {'CANCELLED'}
 
@@ -237,5 +236,5 @@ class AUTO_REMESHER_OT_change_visible_layers(bpy.types.Operator):
             for i in range(len(selected_attr.data)):
                 display_attr.data[i].color = selected_attr.data[i].color
 
-        rprops.active_crease_layer_display = self.display_layer_index
+        rprops.active_crease_layer_display = display_layer_index
         return {'FINISHED'}
