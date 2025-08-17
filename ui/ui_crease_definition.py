@@ -125,19 +125,15 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         layer_selector_box.prop(rprops, "accumulate_lower_layers")
         
         # "All" button on its own row
-        all_row = layer_selector_box.row()
-        all_btn = all_row.operator("auto_remesher.change_visible_layers", text="All")
-        if rprops.active_crease_layer_display != -1:
-            all_row.active = False
+        # all_row = layer_selector_box.row()
+        # all_btn = all_row.operator("auto_remesher.change_visible_layers", text="All")
         
         # Layers arranged in a column
         layers_col = layer_selector_box.column(align=True)
-        layers_col.label(text="Thresholds:")
+        layers_col.label(text="Layers:")
         list_row = layers_col.row()
         list_row.template_list("AUTO_REMESHER_UL_layers", "", rprops, "crease_layers", rprops, "crease_layers_index", rows=4)
         list_ops = list_row.column(align=True)
-        # list_ops.operator("auto_remesher.threshold_add", icon='ADD', text="")
-        # list_ops.operator("auto_remesher.threshold_remove", icon='REMOVE', text="")
         
         ### Crease Visualisation Run Box ###
         run_vis_box = crease_vis_section.box()

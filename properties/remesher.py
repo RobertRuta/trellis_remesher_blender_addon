@@ -50,7 +50,7 @@ class AutoRemesherRemesherProperties(bpy.types.PropertyGroup):
     multi_thresholds: bpy.props.CollectionProperty(type=AutoRemesherThresholdItem)
     thresholds_index: bpy.props.IntProperty(name="Active Threshold", default=0)
     crease_layers   : bpy.props.CollectionProperty(type=AutoRemesherLayerItem)
-    crease_layers_index   : bpy.props.IntProperty(name="Active Layer", default=0, update=_update_vis)
+    crease_layers_index   : bpy.props.IntProperty(name="Active Layer", default=0)
 
     # Threshold mode: single or multi
     is_single_threshold: bpy.props.BoolProperty(
@@ -107,9 +107,10 @@ def add_crease_layer(crease_layers, color_rgba, is_active):
 
 
 def add_crease_layer_from_threshold(crease_layers, threshold: AutoRemesherThresholdItem, is_active: bool = True, set_layer_id: bool = True):
-    crease_layers = crease_layers.add()
+    crease_layer = crease_layers.add()
     if set_layer_id:
-        crease_layers.layer_id = threshold.layer_id
-    crease_layers.color = threshold.color
-    crease_layers.is_active = is_active
-    return crease_layers
+        crease_layer.layer_id = threshold.layer_id
+    crease_layer.color_attr_name = f"L{threshold.layer_id}_crease_color"
+    crease_layer.color = threshold.color
+    crease_layer.is_active = is_active
+    return crease_layer
