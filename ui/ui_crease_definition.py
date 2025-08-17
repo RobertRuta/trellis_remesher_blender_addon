@@ -1,127 +1,5 @@
 import bpy
-from .utils import center_label
-
-
-class VIEW3D_PT_autormesher_api_settings(bpy.types.Panel):
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
-    bl_category = "Auto Remesher"
-    bl_label = "Trellis Connection"
-
-    def draw(self, context):
-        props = context.scene.auto_remesher
-        sprops = props.server
-        layout = self.layout
-        
-        # SERVER CONFIG BOX
-        server_box = layout.box()
-        server_box.label(text="Server Configuration", icon='PREFERENCES')
-        
-        url_row = server_box.split(factor=0.3, align=True)
-        url_row.label(text="API URL:")
-        url_box = url_row.box()
-        url_box.label(text=sprops.api_url)
-        
-        server_box.prop(sprops, "advanced_server_config")
-        
-        if sprops.advanced_server_config:
-            advanced_settings_box = server_box.box()
-            advanced_settings_box.prop(sprops, "server_host", text="Host")
-            advanced_settings_box.prop(sprops, "server_port", text="Port")
-
-        # CHECK CONNECTION
-        check_row = server_box.row()
-        check_row.operator("trellis.check_connection", text="Check Connection", icon='URL')
-        check_row.label(text=sprops.connection_status)
-
-
-class VIEW3D_PT_autoremesher_generator(bpy.types.Panel):
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
-    bl_category = "Auto Remesher"
-    bl_label = "Generate Mesh"
-
-    def draw(self, context):
-        layout = self.layout
-        props = context.scene.auto_remesher
-        gprops = props.generator
-
-        box = layout.box()
-        col = box.column(align=True)
-
-        col.label(text="Prompt", icon='INFO')
-        col.separator()
-        prompt_mode_selector = col.row(align=True)
-        prompt_mode_selector.alignment = 'EXPAND'
-        prompt_mode_selector.prop(gprops, "prompt_mode", expand=True)
-        prompt_mode_selector.separator()
-        if gprops.prompt_mode == 'TEXT':
-            quality_settings = col.row(align=True)
-            quality_settings.label(text="Quality:")
-            quality_settings.prop(gprops, "generation_quality", expand=True)
-
-        prompt_box = col.box()
-        prompt_box.alignment = 'EXPAND'
-        prompt_box.separator()
-        # row = prompt_box.row()
-        # row.separator()
-        if gprops.prompt_mode == 'TEXT':
-            prompt_box.prop(gprops, "text_prompt", text="")
-        elif gprops.prompt_mode == 'IMAGE':
-            prompt_box.template_ID(gprops, "image", open="image.open")
-        
-        prompt_box.separator()
-
-        col.separator()
-        col.separator()
-
-        # Enable only if valid input
-        generate_row = col.row()
-        generate_row.scale_x = 1.5
-        generate_row.alignment = 'CENTER'
-        generate_row.operator("trellis.generate_mesh", text="GENERATE", icon='PLAY')
-        generate_row.enabled = not ((gprops.prompt_mode == 'TEXT' and len(gprops.text_prompt) == 0) 
-                                    or (gprops.prompt_mode == 'IMAGE' and len(gprops.image_path) == 0))
-        col.separator()
-        col.separator()
-
-
-class VIEW3D_PT_autoremesher_loader(bpy.types.Panel):
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
-    bl_category = "Auto Remesher"
-    bl_label = "Load Mesh"
-
-    def draw(self, context):
-        layout = self.layout
-        props = context.scene.auto_remesher
-        rprops = props.remesher
-
-        mesh_info_box = layout.box()
-        mesh_info_label = mesh_info_box.column(align=True)
-        mesh_info_label.label(text="Loaded Mesh Info", icon='OBJECT_DATA')
-        mesh_data_row = mesh_info_box.row(align=True)
-        mesh_data_row.alignment = 'CENTER'
-        if rprops.mesh and getattr(rprops.mesh, "type", None) == 'MESH':
-            mesh_data_box = mesh_data_row.box()
-            mesh_data_box.label(text=f"Name: {rprops.mesh.name}")
-            mesh_data_box.label(text=f"Verts: {len(rprops.mesh.data.vertices)}")
-            mesh_data_box.label(text=f"Faces: {len(rprops.mesh.data.polygons)}")
-        else:
-            mesh_data_row.label(text="No mesh loaded yet.", icon='INFO')
-            mesh_data_row.enabled = False
-
-        layout.separator()
-
-        row1 = layout.row(align=True)
-        row1.label(text="Select Existing Mesh:")
-        row1.template_ID(rprops, "mesh")
-
-        layout.separator()
-
-        row2 = layout.row(align=True)
-        row2.label(text="Import New Mesh:")
-        row2.operator("auto_remesher.import_mesh", text="Open", icon='FILE_FOLDER')
+from ..utils import center_label
 
 
 class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
@@ -137,7 +15,6 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         
         thresholds = [rprops.single_threshold] if rprops.is_single_threshold else rprops.multi_thresholds
         crease_count = rprops.crease_count
-        selected_layer = rprops.active_crease_layer_display
 
         ######################## Creasing Box ########################
         
@@ -149,7 +26,15 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         crease_definiton_box.separator()
         
         ############ Auto Crease Detection Box ############
+        self.draw_auto_crease(rprops, thresholds, crease_count, crease_definiton_box)
         
+        crease_definiton_box.separator()
+        
+        ############ Crease Visualisation Box ############
+        self.draw_crease_painter(rprops, thresholds, crease_count, crease_definiton_box)
+    
+
+    def draw_auto_crease(self, rprops, thresholds, crease_count, crease_definiton_box):
         auto_detect_section = crease_definiton_box.box()
         auto_detect_title_row = auto_detect_section.row()
         auto_detect_title_row.alignment = 'CENTER'
@@ -206,13 +91,11 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         run_auto_detect_row.operator("auto_remesher.detect_creases", text=run_label_txt, icon='MEMORY')
         if crease_count > 0:
             run_auto_detect_row.operator("auto_remesher.clear_creases", text="Clear", icon='X')
-        
-        crease_definiton_box.separator()
-        
-        ############ Crease Visualisation Box ############
-        
+            
+            
+    def draw_crease_painter(self, rprops, thresholds, crease_count, ui_parent):
         ###### Vertex Paint Visualisation Box ######
-        crease_vis_section = crease_definiton_box.box()
+        crease_vis_section = ui_parent.box()
         center_label(crease_vis_section, text="Crease Visualiser", icon="VPAINT_HLT")
         
         ### Crease Visualisation Info Box ###
@@ -221,6 +104,8 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         center_label(info_vis_box, f"Crease layers: {len(thresholds)}")
         center_label(info_vis_box, f"Selected layers: {rprops.active_crease_layer_display + 1 if rprops.active_crease_layer_display >= 0 else 'All'}")
         drawn_layer_count = 0
+        
+        selected_layer = rprops.active_crease_layer_display
         if selected_layer == -1:
             drawn_layer_count = len(thresholds)
         elif rprops.accumulate_lower_layers:
@@ -242,7 +127,6 @@ class VIEW3D_PT_autoremesher_remesher(bpy.types.Panel):
         # "All" button on its own row
         all_row = layer_selector_box.row()
         all_btn = all_row.operator("auto_remesher.change_visible_layers", text="All")
-        all_btn.display_layer_index = -1
         if rprops.active_crease_layer_display != -1:
             all_row.active = False
         
