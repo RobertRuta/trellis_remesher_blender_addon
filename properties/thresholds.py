@@ -16,6 +16,11 @@ class AutoRemesherThresholdItem(bpy.types.PropertyGroup):
 
 class AutoRemesherLayerItem(bpy.types.PropertyGroup):
     layer_id: bpy.props.IntProperty(name="Layer", default=0, min=0, max=255, description="Layer number (0 = largest angle, higher = smaller angle)")
+    color_attr_name: bpy.props.StringProperty(
+        name="Color Attribute Name",
+        description="Name of the color attribute for this layer",
+        default="crease_layer_0"
+    )
     color: bpy.props.FloatVectorProperty(
         name="color",
         subtype='COLOR',
