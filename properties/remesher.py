@@ -35,13 +35,22 @@ class AutoRemesherRemesherProperties(bpy.types.PropertyGroup):
         description="Clear existing edge creases before detection",
         default=True
     )
-
+    
+    # Re-run visualisation when visualisation logic changes
+    def _update_vis(self, context):
+        try:
+            # Rebuild per-layer attributes according to the new mode
+            bpy.ops.auto_remesher.vp_crease_vis()
+        except Exception as e:
+            print(f"Error updating visualisation: {e}")
+            pass
+        
     # Dynamic threshold list
     single_threshold: bpy.props.PointerProperty(type=AutoRemesherThresholdItem)
     multi_thresholds: bpy.props.CollectionProperty(type=AutoRemesherThresholdItem)
     thresholds_index: bpy.props.IntProperty(name="Active Threshold", default=0)
     crease_layers   : bpy.props.CollectionProperty(type=AutoRemesherLayerItem)
-    crease_layers_index   : bpy.props.IntProperty(name="Active Layer", default=0)
+    crease_layers_index   : bpy.props.IntProperty(name="Active Layer", default=0, update=_update_vis)
 
     # Threshold mode: single or multi
     is_single_threshold: bpy.props.BoolProperty(
@@ -64,20 +73,12 @@ class AutoRemesherRemesherProperties(bpy.types.PropertyGroup):
         default=-1, min=-1
     )
 
-    # Re-run visualisation when visualisation logic changes
-    def _update_accumulate(self, context):
-        try:
-            # Rebuild per-layer attributes according to the new mode
-            bpy.ops.auto_remesher.vp_crease_vis()
-        except Exception:
-            pass
-
     # Whether to accumulate lower layers when viewing a specific layer
     accumulate_lower_layers: bpy.props.BoolProperty(
         name="Accumulate Lower Layers",
         description="When viewing a layer L, also show layers < L",
         default=False,
-        update=_update_accumulate
+        update=_update_vis
     )
     
 
