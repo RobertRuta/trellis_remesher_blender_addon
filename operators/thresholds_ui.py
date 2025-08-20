@@ -1,6 +1,5 @@
 import random
 import bpy
-from ..properties.remesher import add_crease_threshold, update_thresholds
 
 
 class AUTO_REMESHER_OT_threshold_add(bpy.types.Operator):
@@ -18,8 +17,8 @@ class AUTO_REMESHER_OT_threshold_add(bpy.types.Operator):
         else:
             new_angle = 20
         random_color = (random.random(), random.random(), random.random(), 1.0)
-        threshold = add_crease_threshold(thresholds, new_angle, random_color)
-        update_thresholds(thresholds)
+        threshold = rprops.add_threshold(new_angle, random_color)
+        rprops.sort_thresholds()
         
         # Select the newly added item
         rprops.thresholds_index = threshold.layer_id
@@ -40,7 +39,7 @@ class AUTO_REMESHER_OT_threshold_remove(bpy.types.Operator):
         if 0 <= idx < len(thresholds):
             thresholds.remove(idx)
             rprops.thresholds_index = max(0, idx - 1)
-            update_thresholds(thresholds)
+            rprops.sort_thresholds()
         
         return {'FINISHED'}            
 
@@ -68,12 +67,12 @@ class AUTO_REMESHER_OT_generate_finer_detail(bpy.types.Operator):
         thresholds.clear()
 
         # Add thresholds in list order: base, half, quarter
-        add_crease_threshold(thresholds, base_angle, (r, g, b, a))
-        add_crease_threshold(thresholds, base_angle * 0.5, shade1)
-        last_added_threshold = add_crease_threshold(thresholds, base_angle * 0.25, shade2)
+        rprops.add_threshold(base_angle, (r, g, b, a))
+        rprops.add_threshold(base_angle * 0.5, shade1)
+        last_added_threshold = rprops.add_threshold(base_angle * 0.25, shade2)
 
         # Update layer numbers after generating thresholds
-        update_thresholds(thresholds)
+        rprops.sort_thresholds()
 
         # Select the last added
         rprops.thresholds_index = last_added_threshold.layer_id

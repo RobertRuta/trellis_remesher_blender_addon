@@ -1,9 +1,10 @@
+from trellis_remesher_blender_addon.properties.thresholds import AutoRemesherLayerItem
+from ..utils import props_accesor as p, mesh_attribute_accessor as mesh_attr
+
 import bpy
 import numpy as np
 import fnmatch
 
-from trellis_remesher_blender_addon.properties.thresholds import AutoRemesherLayerItem
-from ..properties.remesher import add_crease_layer_from_threshold
 
 class AUTO_REMESHER_OT_vp_crease_visualiser(bpy.types.Operator):
     bl_idname = "auto_remesher.vp_crease_vis"
@@ -11,64 +12,24 @@ class AUTO_REMESHER_OT_vp_crease_visualiser(bpy.types.Operator):
     bl_description = "Apply vertex paint visualization of crease edges using face corner colors"
 
     def execute(self, context):
-        props = context.scene.auto_remesher
-        rprops = props.remesher
         
-        thresholds = [rprops.single_threshold] if rprops.is_single_threshold else rprops.multi_thresholds        
-        if len(thresholds) == 0:
-            self.report({'ERROR'}, "No thresholds found.")
-            return {'CANCELLED'}
-        
-        crease_layers = rprops.crease_layers
-        if len(crease_layers) == 0:
-            for threshold in thresholds:
-                add_crease_layer_from_threshold(crease_layers, threshold)
-    
-        obj = rprops.mesh or context.object
-        if not obj or obj.type != 'MESH':
-            self.report({'ERROR'}, "No mesh selected")
-            return {'CANCELLED'}
-
-        mesh = obj.data
         try:
+            mesh_obj = p.get_mesh(context)
+            mesh = mesh_obj.data       
+            
+            p.build_crease_layers_from_thresholds(context)
+            crease_layers = p.get_crease_layers(context)
+            
             # Ensure we're in object mode for mesh operations
-            was_edit = obj.mode == 'EDIT'
+            was_edit = mesh_obj.mode == 'EDIT'
             if was_edit:
                 bpy.ops.object.mode_set(mode='OBJECT')
 
-            # Get edge crease layer attribute
-            crease_layer_attr = mesh.attributes.get('crease_layer')
-            if crease_layer_attr is None:
-                self.report({'ERROR'}, "No crease layer data found. Run crease detection first.")
-                return {'CANCELLED'}
-
-            # Array of edge crease layer ids
-            n_edges = len(mesh.edges)
-            edge_crease_layers = np.empty(n_edges, dtype=np.int32)
-            try:
-                crease_layer_attr.data.foreach_get("value", edge_crease_layers)
-            except Exception:
-                self.report({'ERROR'}, "Bug! Failed to get crease layer data.")
-                return {'CANCELLED'}
-
-            # Perpare array of edge indices for each face corner to be colored
-            num_face_corners = len(mesh.loops)
-            face_corner_edge_ids = np.empty(num_face_corners, dtype=np.int32)
-            mesh.loops.foreach_get("edge_index", face_corner_edge_ids)
-
-            # Set crease layer ids for each face corner
-            face_corner_layers = edge_crease_layers[face_corner_edge_ids]  # shape (n_loops,)
-            face_corner_crease_mask = (face_corner_layers >= 0)
-
-            # Get/Init face corner color attributes
-            attr_name_dict = { str(i): f"L{i}_crease_color" for i in range(len(crease_layers)) }
-            attr_name_dict |= {"all": "all_crease_color", "display": "display_crease_color"}
+            face_corner_layers = mesh_attr.extract_corner_layer_ids(mesh)
             
             # Init/Reset face corner color attributes used for painting
-            _validate_and_set_corner_color_attr(self, mesh, attr_name_dict["display"], data=None)
-            for i, _ in enumerate(crease_layers):
-                _validate_and_set_corner_color_attr(self, mesh, f"L{i}_crease_color", data=None)
-            _validate_and_set_corner_color_attr(self, mesh, attr_name_dict["all"], data=None)
+            for layer_id in range(-2, len(crease_layers)):
+                mesh_attr.get_corner_color_layer(mesh, layer_id, create=True)
 
             # Array of colors fo each layer
             layer_colors = np.array(
@@ -77,30 +38,24 @@ class AUTO_REMESHER_OT_vp_crease_visualiser(bpy.types.Operator):
             ).clip(0.0, 1.0)
 
             ######### Paint the face corners #########
-        
             # Cumulative mask of colored face corners
-            mask = np.zeros(num_face_corners, dtype=bool)
+            mask = np.zeros(len(face_corner_layers), dtype=bool)
             # should_accumulate = rprops.accumulate_lower_layers
             should_accumulate = False
-            combined_layer_colors = np.ones((num_face_corners, 4), dtype=np.float32)
+            combined_layer_colors = np.ones((len(face_corner_layers), 4), dtype=np.float32)
             
             for layer_id in range(len(crease_layers)):
                 current_layer_mask = (face_corner_layers == layer_id)
                 mask = mask | current_layer_mask if should_accumulate else current_layer_mask    
-                # Color masked face corners with current layer color
-                face_corner_colors = np.ones((num_face_corners, 4), dtype=np.float32)
-                face_corner_colors[mask] = layer_colors[layer_id]
-                # Set face corner color data for current layer
-                layer_attr_name = attr_name_dict[str(layer_id)]
-                _validate_and_set_corner_color_attr(self, mesh, layer_attr_name, data=face_corner_colors.ravel())
+                mesh_attr.set_corner_layer_color(mesh, layer_id, rgba=layer_colors[layer_id])
                 
                 combined_layer_colors[current_layer_mask] = layer_colors[layer_id]
             
             # Set face corner color data for combined color layer
-            all_layer_attr_name = attr_name_dict["all"]
-            _validate_and_set_corner_color_attr(self, mesh, all_layer_attr_name, data=combined_layer_colors.ravel())
-
-            _set_active_color_attr(self, mesh)
+            mesh_attr.set_corner_layer_color(mesh, -1, data=combined_layer_colors.ravel())
+            mesh_attr.display_chosen_layer(mesh, -1)
+            
+            _set_active_color_attr(self, mesh, )
             
             mesh.update()    
             if was_edit:
@@ -202,7 +157,6 @@ class AUTO_REMESHER_OT_clear_selected_layer(bpy.types.Operator):
         except Exception as e:
             self.report({'ERROR'}, f"Failed to clear layer {self.selected_layer_id}: {e}")
         return {'FINISHED'}
-        
         
 # Helper functions
 def _validate_and_set_corner_color_attr(self, mesh, name: str, data=None):

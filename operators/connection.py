@@ -1,4 +1,5 @@
 import bpy
+from ..utils.props_accesor import get_props
 
 
 class TRELLIS_OT_check_connection(bpy.types.Operator):
@@ -6,7 +7,7 @@ class TRELLIS_OT_check_connection(bpy.types.Operator):
     bl_label = "Check Connection"
 
     def execute(self, context):
-        props = context.scene.auto_remesher
+        props = get_props(context)
 
         import requests
         try:
