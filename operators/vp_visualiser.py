@@ -75,37 +75,22 @@ class AUTO_REMESHER_OT_clear_vp_visualisation(bpy.types.Operator):
     bl_description = "Delete all vertex paint visualization attributes ending with '_crease_color'"
 
     def execute(self, context):
-        props = context.scene.auto_remesher
-        rprops = props.remesher
-        
-        rprops.crease_layers.clear()  # Clear all crease layers
-        rprops.crease_layers_index = 0
-        
-        obj = rprops.mesh or context.object
-        if not obj or obj.type != 'MESH':
-            self.report({'ERROR'}, "No mesh selected")
+        try:
+            rprops = p.get_rprops(context)
+            mesh = p.get_mesh(context).data
+            # Clear created attributes attached to mesh
+            removed = mesh_attr.delete_created_attributes(mesh, domain='CORNER')
+            crease_layers_prop = p.get_crease_layers(context)
+            crease_layers_prop.clear()
+            rprops.crease_layers_index = 0
+        except Exception as e:
+            self.report({'ERROR'}, e)
             return {'CANCELLED'}
-
-        mesh = obj.data
         
-        removed = 0
-
-        # Gather matching attributes first (avoid modifying while iterating)
-        attrs_to_remove = [
-            attr.name for attr in mesh.attributes
-            if fnmatch.fnmatch(attr.name, "*_crease_color")
-        ]
-
-        for name in attrs_to_remove:
-            mesh.attributes.remove(mesh.attributes[name])
-            removed += 1
-
-        if removed > 0:
-            mesh.update()
-            self.report({'INFO'}, f"Removed {removed} crease color attribute(s).")
+        if len(removed) < 1:
+            self.report({'WARNING'}, f"Removed {len(removed)} attributes. Should be greater than 0.")
         else:
-            self.report({'INFO'}, "No crease color attributes found.")
-
+            self.report({'INFO'}, f"Removed {len(removed)} attributes and reset relevant props.")
         return {'FINISHED'}
 
 
