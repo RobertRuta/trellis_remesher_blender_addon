@@ -53,6 +53,8 @@ class AUTO_REMESHER_OT_vp_crease_visualiser(bpy.types.Operator):
             if was_edit:
                 bpy.ops.object.mode_set(mode='EDIT')
             
+            bpy.ops.auto_remesher.set_shading_mode_to_attribute()
+            
             self.report({'INFO'}, "Successfully created attributes.")
             return {'FINISHED'}
 
@@ -121,7 +123,6 @@ class AUTO_REMESHER_OT_clear_selected_layer(bpy.types.Operator):
         rprops = props.remesher
         
         layer_id = self.selected_layer_id
-        layer = rprops.crease_layers[layer_id]
         
         mesh = rprops.mesh.data
         try:
@@ -132,7 +133,26 @@ class AUTO_REMESHER_OT_clear_selected_layer(bpy.types.Operator):
         except Exception as e:
             self.report({'ERROR'}, f"Failed to clear layer {self.selected_layer_id}: {e}")
         return {'FINISHED'}
-        
+    
+    
+class AUTO_REMESHER_OT_set_shading_mode(bpy.types.Operator):
+    bl_idname = "auto_remesher.set_shading_mode_to_attribute"
+    bl_label = "Set Viewport Shading to Attribute"
+    bl_description = "Set Solid mode color to 'Attribute' in the active 3D View"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data and context.space_data.type == 'VIEW_3D'
+
+    def execute(self, context):
+        shading = context.space_data.shading
+        shading.type = 'SOLID'
+        shading.color_type = 'VERTEX'
+        self.report({'INFO'}, "Viewport shading color set to Attribute")
+        return {'FINISHED'}
+
+
 # Helper function
 def _set_active_color_attr(self, mesh):
     color_attributes = getattr(mesh, "color_attributes", None)
