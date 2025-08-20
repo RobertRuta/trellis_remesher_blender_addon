@@ -36,17 +36,23 @@ def get_crease_layers(context):
     
     return crease_layers
 
-def build_crease_layers_from_thresholds(context):
+def clear_crease_layers(context):
     rprops = get_rprops(context)
-    thresholds = get_thresholds(context)
     crease_layers = rprops.crease_layers
+    if len(crease_layers) == 0 or crease_layers is None:    
+        return
+    crease_layers = get_crease_layers(context)
+    crease_layers.clear()
+
+def build_crease_layers_from_thresholds(context):
+    rprops = get_rprops(context)        
+    thresholds = get_thresholds(context)
     try:
         crease_layers = get_crease_layers(context)
     except ValueError as e:
         crease_layers = rprops.crease_layers
-        if len(crease_layers) > 0 and crease_layers is not None:
+        if crease_layers is not None and len(crease_layers) > 0:
             raise ValueError(f"Failed to build \'crease_layers\' from \'thresholds\' because \'crease_layers\' is broken.")
-    
     for threshold in thresholds:
         rprops.add_crease_layer_from_threshold(threshold)
 
@@ -67,6 +73,3 @@ def update_creases_with_thresholds(context):
     
     for i, crease_layer in enumerate(crease_layers):
         crease_layer.color = thresholds[i].color
-        
-    
-    

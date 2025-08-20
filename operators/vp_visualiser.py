@@ -12,12 +12,10 @@ class AUTO_REMESHER_OT_vp_crease_visualiser(bpy.types.Operator):
     bl_description = "Apply vertex paint visualization of crease edges using face corner colors"
 
     def execute(self, context):
-        
         try:
             mesh_obj = p.get_mesh(context)
             mesh = mesh_obj.data       
             
-            p.build_crease_layers_from_thresholds(context)
             crease_layers = p.get_crease_layers(context)
             
             # Ensure we're in object mode for mesh operations
@@ -31,12 +29,6 @@ class AUTO_REMESHER_OT_vp_crease_visualiser(bpy.types.Operator):
             for layer_id in range(-2, len(crease_layers)):
                 mesh_attr.get_corner_color_layer(mesh, layer_id, create=True)
 
-            # Array of colors fo each layer
-            layer_colors = np.array(
-                [[float(t.color[0]), float(t.color[1]), float(t.color[2]), 1.0] for t in crease_layers],
-                dtype=np.float32
-            ).clip(0.0, 1.0)
-
             ######### Paint the face corners #########
             # Cumulative mask of colored face corners
             mask = np.zeros(len(face_corner_layers), dtype=bool)
@@ -44,12 +36,12 @@ class AUTO_REMESHER_OT_vp_crease_visualiser(bpy.types.Operator):
             should_accumulate = False
             combined_layer_colors = np.ones((len(face_corner_layers), 4), dtype=np.float32)
             
-            for layer_id in range(len(crease_layers)):
-                current_layer_mask = (face_corner_layers == layer_id)
+            for layer in crease_layers:
+                current_layer_mask = (face_corner_layers == layer.layer_id)
                 mask = mask | current_layer_mask if should_accumulate else current_layer_mask    
-                mesh_attr.set_corner_layer_color(mesh, layer_id, rgba=layer_colors[layer_id])
-                
-                combined_layer_colors[current_layer_mask] = layer_colors[layer_id]
+                if layer.is_visible:
+                    mesh_attr.set_corner_layer_color(mesh, layer.layer_id, rgba=layer.color)
+                    combined_layer_colors[current_layer_mask] = layer.color
             
             # Set face corner color data for combined color layer
             mesh_attr.set_corner_layer_color(mesh, -1, data=combined_layer_colors.ravel())
@@ -108,12 +100,13 @@ class AUTO_REMESHER_OT_draw_selected_layer(bpy.types.Operator):
         layer = rprops.crease_layers[layer_id]
         
         mesh = rprops.mesh.data
-        color_data = layer.get_buffer(context)
-        layer_mask = color_data < 1
-        display_attr = _get_corner_color_attr(mesh, "display_crease_color")
-        display_data = _get_attr_color_data(display_attr)
-        new_data = np.where(layer_mask, color_data, display_data)
-        _validate_and_set_corner_color_attr(self, mesh, "display_crease_color", new_data)
+        try:
+            mesh_attr.set_corner_layer_color(mesh, layer_id, rgba=layer.color)
+            mesh_attr.display_update_layer(mesh, layer_id)
+        except:
+            self.report({'ERROR'}, f"Failed to draw specified layer: {layer.color_attr_name}")
+            return {'CANCELLED'}
+        
         return {'FINISHED'}
         
         
@@ -132,12 +125,15 @@ class AUTO_REMESHER_OT_clear_selected_layer(bpy.types.Operator):
         
         mesh = rprops.mesh.data
         try:
-            color_data = layer.get_buffer(context)
-            color_mask = color_data < 1
-            display_attr = _get_corner_color_attr(mesh, "display_crease_color")
-            data = _get_attr_color_data(display_attr)
-            new_data = np.where(color_mask, 1.0, data)
-            _validate_and_set_corner_color_attr(self, mesh, "display_crease_color", new_data)
+            # No data provided -> reset to white
+            mesh_attr.set_corner_layer_color(mesh, layer_id)
+            mesh_attr.display_update_layer(mesh, layer_id)
+            # color_data = layer.get_buffer(context)
+            # color_mask = color_data < 1
+            # display_attr = _get_corner_color_attr(mesh, "display_crease_color")
+            # data = _get_attr_color_data(display_attr)
+            # new_data = np.where(color_mask, 1.0, data)
+            # _validate_and_set_corner_color_attr(self, mesh, "display_crease_color", new_data)
             self.report({'INFO'}, f"Successfully cleared layer {self.selected_layer_id}")
         except Exception as e:
             self.report({'ERROR'}, f"Failed to clear layer {self.selected_layer_id}: {e}")

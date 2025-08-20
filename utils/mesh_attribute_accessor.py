@@ -125,6 +125,8 @@ def extract_corner_layer_ids(mesh):
 
 def extract_corner_layer_mask_for_id(mesh, layer_id: int):
     corner_layer_ids = extract_corner_layer_ids(mesh)
+    if layer_id in (-1, -2):
+        return corner_layer_ids >= 0
     return corner_layer_ids == layer_id
         
 
@@ -155,14 +157,21 @@ def set_corner_layer_color(mesh,
                            layer_id: int, 
                            *, 
                            rgba: Tuple[float, float, float, float]=(1.,1.,1.,1.), 
-                           data=None, 
+                           data=None,
+                           mask=None,
                            edit: bool=False):
     attr = get_corner_color_layer(mesh, layer_id, edit=edit, create=True)
     n = len(attr.data) * 4
     if data is not None:
         if len(data) != n:
             raise ValueError(f"\'data\' has wrong length. Expected {n} got {len(data)}")
-        attr.data.foreach_set('color', data)
+        if mask is not None:
+            base = np.empty(n, np.float32)
+            attr.data.foreach_get('color', base)
+            new_color_data = np.where(mask, data, base)
+        else:
+            new_color_data = data
+        attr.data.foreach_set('color', new_color_data)
         return attr
     color = np.array(rgba, dtype=np.float32)
     if color.shape != (4,):
@@ -181,7 +190,8 @@ def extract_corner_color_data(mesh, layer_id: int, *, edit: bool=False, create: 
     n = len(attr.data) * 4
     color_data = np.ones(n, dtype=np.float32)
     attr.data.foreach_get('color', color_data)
-    layer_mask = color_data < 1
+    layer_mask = extract_corner_layer_mask_for_id(mesh, layer_id)
+    layer_mask = np.repeat(layer_mask, 4) # rescale to match color data
     return layer_mask, color_data
 
 
@@ -189,7 +199,11 @@ def display_chosen_layer(mesh, layer_id: int):
     attr = get_corner_color_layer(mesh, layer_id, create=False)
     _, data_to_copy = extract_corner_color_data(mesh, layer_id)
     set_corner_layer_color(mesh, layer_id=-2, data=data_to_copy)
-    
+
+
+def display_update_layer(mesh, layer_id: int):
+    mask, data_to_copy = extract_corner_color_data(mesh, layer_id)
+    set_corner_layer_color(mesh, layer_id=-2, data=data_to_copy, mask=mask)
 
 
 def delete_created_attributes(mesh, *, domain: Optional[str] = None, data_type: Optional[str] = None, name_pred: Optional[Callable[[str], bool]] = None, ) -> List[str]:

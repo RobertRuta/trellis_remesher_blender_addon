@@ -69,13 +69,14 @@ class AUTO_REMESHER_OT_detect_creases(bpy.types.Operator):
                 bmesh.update_edit_mesh(mesh, loop_triangles=False, destructive=False)
             else:
                 mesh.update()
-                        
         except Exception as e:
             self.report({'ERROR'}, f"Crease detection failed: {e}")
             return {'CANCELLED'}
 
         # Auto-run visualiser after calculating creases
         try:
+            p.clear_crease_layers(context)
+            p.build_crease_layers_from_thresholds(context)
             bpy.ops.auto_remesher.vp_crease_vis()
         except Exception as e:
             self.report({'WARNING'}, f"Crease visualiser failed. Skipping...")
