@@ -128,47 +128,10 @@ class AUTO_REMESHER_OT_clear_selected_layer(bpy.types.Operator):
             # No data provided -> reset to white
             mesh_attr.set_corner_layer_color(mesh, layer_id)
             mesh_attr.display_update_layer(mesh, layer_id)
-            # color_data = layer.get_buffer(context)
-            # color_mask = color_data < 1
-            # display_attr = _get_corner_color_attr(mesh, "display_crease_color")
-            # data = _get_attr_color_data(display_attr)
-            # new_data = np.where(color_mask, 1.0, data)
-            # _validate_and_set_corner_color_attr(self, mesh, "display_crease_color", new_data)
             self.report({'INFO'}, f"Successfully cleared layer {self.selected_layer_id}")
         except Exception as e:
             self.report({'ERROR'}, f"Failed to clear layer {self.selected_layer_id}: {e}")
         return {'FINISHED'}
-        
-# Helper functions
-def _validate_and_set_corner_color_attr(self, mesh, name: str, data=None):
-    attribute = mesh.attributes.get(name)
-    if attribute is None:
-        attribute = mesh.attributes.new(name=name, type='BYTE_COLOR', domain='CORNER')
-    elif attribute.domain != 'CORNER' or attribute.data_type != 'BYTE_COLOR':
-        mesh.attributes.remove(attribute)
-        attribute = mesh.attributes.new(name=name, type='BYTE_COLOR', domain='CORNER')
-    # Initialize with white color
-    if data is not None:
-        attribute.data.foreach_set("color", data)
-    else:
-        # Set to white by default
-        attribute.data.foreach_set("color", [1.0] * (len(attribute.data)*4))
-
-
-def _get_corner_color_attr(mesh, name: str):
-    color_attributes = getattr(mesh, "color_attributes", None)
-    if color_attributes is None:
-        return None
-    return color_attributes.get(name)
-
-
-def _get_attr_color_data(attr):
-    if attr is None:
-        return None
-    buf = np.ones(len(attr.data)*4, np.float16)
-    attr.data.foreach_get('color', buf)
-    return buf
-
         
 # Helper function
 def _set_active_color_attr(self, mesh):
